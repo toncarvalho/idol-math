@@ -112,7 +112,9 @@ A grande vantagem: **o jogo não coleta dado nenhum** — tudo é `localStorage`
 - [x] Corrigir o deploy do GitHub Pages — funcionando (deploys de jul/2026 publicados com sucesso).
 - [ ] Criar conta Google Play Developer (US$ 25) + perfil de pagamentos (merchant).
 - [ ] Escrever e publicar a política de privacidade.
-- [ ] Ícones PNG finais e capturas de tela de loja (retrato, com legendas).
+- [x] Ícones PNG finais e capturas de tela de loja (retrato, com legendas) —
+      kit pronto em `store/` (ícone 512, feature graphic 1024×500 e 6 capturas
+      1080×1920 com legenda; ver `store/README.md`).
 
 **Fase 1 — Valor de produção + Lançamento Android (2–4 semanas)**
 - [x] Arte dos inimigos e chefões (24 figuras SVG flat, estilo coeso com os heróis)
