@@ -122,7 +122,13 @@ A grande vantagem: **o jogo não coleta dado nenhum** — tudo é `localStorage`
 - [x] Heroína visível no palco, com animação de ataque (raio) e de golpe recebido.
 - [ ] Música real (2–3 loops licenciados), mantendo o synth como fallback.
 - [x] Mecânica especial por chefão + power-ups de combo (ver §11).
-- [ ] Implementar flag `DEMO` e gating de conteúdo na web.
+- [x] Estrutura de Mundos no ar: seleção de habilidade antes da grade,
+      Tabuada dentro, prévias "Em breve" de Soma e Divisão (ver §12).
+- [ ] Mundo da Divisão (§12 — próximo passo; valida a estrutura).
+- [ ] Mundo Soma & Subtração (§12 — vira a demo web; pode ir para a Fase 2
+      se atrasar o lançamento Android).
+- [ ] Implementar flag `DEMO` e gating de conteúdo na web (com mundos: demo =
+      Soma & Subtração completo; ver §12).
 - [ ] Empacotar com Capacitor (Android), assinar, testes internos.
 - [ ] Ficha da loja (PT-BR), questionário IARC, formulário Famílias.
 - [ ] Publicar a R$ 9,90 (promo de lançamento) → R$ 14,90.
@@ -190,19 +196,23 @@ fundação a fazer.
 Critério de "pronto para cobrar": itens 1–4 fechados + capturas de tela de loja
 que se sustentem ao lado dos concorrentes pagos da categoria.
 
-## 12. Mundos (expansão de conteúdo — PLANEJADO, ainda não implementado)
+## 12. Mundos (expansão de conteúdo — EM EXECUÇÃO)
 
-> Decisão de produto (jul/2026, conversa a retomar): o jogo será organizado em
-> **mundos**, cada um cobrindo uma habilidade matemática. Nada disso está em
-> código ainda — esta seção registra o desenho acordado para a retomada.
+> Decisão de produto (jul/2026): o jogo é organizado em **mundos**, cada um
+> cobrindo uma habilidade matemática. A **estrutura foi implementada e
+> publicada em 16/07/2026** (commit `39a1b58`, verificada end-to-end no
+> navegador e no ar no GitHub Pages): tela de seleção de mundos antes da
+> grade, grade de fases por mundo, progresso por mundo no save (100%
+> compatível com saves antigos), Soma & Subtração e Divisão como prévia
+> "🚧 Em breve".
 
 ### Os três mundos
 
 | # | Mundo | Conteúdo | Estado |
 |---|-------|----------|--------|
 | 1 | 🌟 **Soma & Subtração** | Contas de +/− por faixa numérica (1º–2º ano) | a construir (o maior) |
-| 2 | 🎤 **Tabuada** | O jogo atual, fases 1–12 intactas | ✅ pronto |
-| 3 | ⚡ **Divisão** | Tabuada ao contrário: 56 ÷ 7 (4º ano) | a construir (barato) |
+| 2 | 🎤 **Tabuada** | O jogo atual, fases 1–12 intactas | ✅ no ar, dentro da estrutura de mundos |
+| 3 | ⚡ **Divisão** | Tabuada ao contrário: 56 ÷ 7 (4º ano) | 🎯 PRÓXIMO PASSO (barato) |
 
 A ordem 1→2→3 é a progressão pedagógica da criança — Soma & Subtração vem
 ANTES da tabuada na escola. Efeito comercial: amplia a faixa etária de ~8–10
@@ -220,12 +230,14 @@ app pago.
   com "emprestar" → até 100) e os distratores certos são outros (±1, ±2, erro
   de dezena no vai-um). Exige `gerarPerguntaSoma` novo no MathEngine e fases
   declarando faixa em vez de tabuada. Desenhar as fases exatas com cuidado.
-- **Estrutura**: array `MUNDOS` em `js/data/fases.js` (data-driven, como tudo);
-  menu de seleção de mundo antes da grade; grade de fases por mundo; tema
-  visual/cor de fundo por mundo (o `gerarFundo` da BootScene já aceita cores).
-- **Sequência de construção sugerida**: (a) estrutura de mundos com a Tabuada
-  dentro; (b) Divisão, validando a estrutura com conteúdo barato; (c) Soma &
-  Subtração por último.
+- ~~**Estrutura**: array `MUNDOS` em `js/data/fases.js`~~ → **feito
+  (16/07/2026)**: `MUNDOS` + helpers (`fasesDoMundo`, `indiceFase`,
+  `proximaFase`), tela `screen-mundos`, grade por mundo, Boss Rush restrito à
+  Tabuada, pausa→Fases abre a grade do mundo da fase. Falta o tema visual/cor
+  de fundo por mundo no gameplay (o `gerarFundo` da BootScene já aceita cores).
+- **Sequência de construção**: (a) ✅ estrutura de mundos com a Tabuada
+  dentro; (b) 🎯 Divisão, validando a estrutura com conteúdo barato; (c) Soma
+  & Subtração por último.
 
 ### Regras de segurança do save (INVIOLÁVEIS)
 
