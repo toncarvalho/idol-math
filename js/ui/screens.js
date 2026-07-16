@@ -17,6 +17,8 @@ const UIScreens = (() => {
   let removendoPerfil = false;
   let novoHeroiId = 1;
   let perfilParaRemover = null;
+  let lojaHeroiSel = null;        // herói exibido na loja (abas de personagem)
+  let lojaSel = null;             // item aguardando confirmação: { tipo: "roupa"|"efeito", id }
 
   // ----- helpers -----
   function root() {
@@ -192,59 +194,199 @@ const UIScreens = (() => {
   }
 
   // ===================== LOJA =====================
+  // Fluxo de compra em 2 toques (jogo infantil, sem compra acidental):
+  // 1º toque num item não possuído SELECIONA (preview + botão "Comprar");
+  // 2º toque no mesmo card, ou no botão, CONFIRMA. Itens possuídos equipam
+  // direto. Abas trocam o personagem exibido sem sair da loja.
   function mostrarMsgLoja(txt) {
     const m = document.getElementById("loja-msg");
     if (m) m.textContent = txt;
   }
+  function lojaHeroiAtual() {
+    return lojaHeroiSel || Storage.getHeroiId();
+  }
+  function itemSelecionado() {
+    if (!lojaSel) return null;
+    return lojaSel.tipo === "roupa" ? getRoupa(lojaSel.id) : getEfeito(lojaSel.id);
+  }
+  function cardLoja(attr, id, miolo, info) {
+    const selCls = lojaSel && lojaSel.id === id ? " sel" : "";
+    return `
+      <button class="roupa-card ${info.cls}${selCls}" type="button" ${attr}="${id}" style="--cor:${info.cor}">
+        ${miolo}
+        <span class="roupa-estado">${info.estado}</span>${info.falta}
+      </button>`;
+  }
+  /** Estado do card (classe, rótulo, "faltam N") comum a roupas e efeitos. */
+  function infoCard(equipado, possui, preco, moedas, reqOk, cor) {
+    if (equipado) return { cls: "equipada", estado: "✓ Equipada", falta: "", cor };
+    if (possui) return { cls: "possui", estado: "Equipar", falta: "", cor };
+    if (!reqOk) return { cls: "bloq", estado: `🔒 🪙 ${preco}`, falta: "", cor };
+    const falta = moedas < preco
+      ? `<span class="roupa-falta">faltam 🪙 ${preco - moedas}</span>` : "";
+    return { cls: "comprar", estado: `🪙 ${preco}`, falta, cor };
+  }
   function montarLoja() {
-    const heroId = Storage.getHeroiId();
+    const heroId = lojaHeroiAtual();
     const heroi = getHeroi(heroId);
     const equipada = Storage.roupaEquipada(heroId);
     const cor = corHex(heroi.cor);
+    const moedas = Storage.getMoedas();
     const saldo = document.getElementById("loja-saldo");
-    if (saldo) saldo.textContent = `🪙 ${Storage.getMoedas()} moedas`;
+    if (saldo) saldo.textContent = `🪙 ${moedas} moedas`;
     mostrarMsgLoja("");
     const corpo = document.getElementById("loja-corpo");
     if (!corpo) return;
+
+    // abas de personagem (troca sem sair da loja)
+    const tabs = HEROIS.map((h) => `
+      <button class="loja-tab ${h.id === heroId ? "sel" : ""}" type="button"
+        data-lojaheroi="${h.id}" style="--cor:${corHex(h.cor)}" aria-label="${esc(h.nome)}">
+        <img src="assets/herois/${arquivoAvatar(Storage.roupaEquipada(h.id), h.id)}.svg" alt="">
+      </button>`).join("");
+
+    // preview grande: item selecionado (experimentar antes de comprar) ou o equipado
+    let previewFile = arquivoAvatar(equipada, heroId);
+    let previewFx = "";
+    let legenda = esc(heroi.nome);
+    const sel = itemSelecionado();
+    if (sel && lojaSel.tipo === "roupa") {
+      previewFile = sel.file;
+      legenda = `${esc(heroi.nome)} · ${esc(sel.nome)}`;
+    } else if (sel && lojaSel.tipo === "efeito") {
+      previewFx = `<span class="loja-preview-fx">${sel.icone}</span>`;
+      legenda = `${esc(heroi.nome)} · ${esc(sel.nome)}`;
+    }
+
+    // área de confirmação do item selecionado
+    let confirmar = "";
+    if (sel) {
+      const reqOk = lojaSel.tipo !== "roupa" || Storage.requisitoRoupaOk(sel.id);
+      if (!reqOk) {
+        confirmar = `<p class="loja-req">🔒 Para desbloquear: ${esc(sel.requisito.desc)}</p>`;
+      } else if (moedas < sel.preco) {
+        confirmar = `<p class="loja-req">Faltam 🪙 ${sel.preco - moedas} — jogue pra ganhar! 🎮</p>`;
+      } else {
+        confirmar = `<button class="ui-btn mg-ouro loja-comprar" type="button" data-acao="loja-comprar">
+          🛍️ Comprar ${esc(sel.nome)} por 🪙 ${sel.preco}</button>`;
+      }
+    }
+
     const cards = roupasDoHeroi(heroId).map((r) => {
-      const possui = Storage.possuiRoupa(r.id);
-      const eq = r.id === equipada;
-      let estado, cls;
-      if (eq) { estado = "✓ Equipada"; cls = "equipada"; }
-      else if (possui) { estado = "Equipar"; cls = "possui"; }
-      else { estado = `🪙 ${r.preco}`; cls = "comprar"; }
-      return `
-        <button class="roupa-card ${cls}" type="button" data-roupa="${r.id}" style="--cor:${cor}">
-          <img class="roupa-img" src="assets/herois/${r.file}.svg" alt="${esc(r.nome)}" loading="lazy">
-          <span class="roupa-nome">${esc(r.nome)}</span>
-          <span class="roupa-estado">${estado}</span>
-        </button>`;
+      const info = infoCard(
+        r.id === equipada, Storage.possuiRoupa(r.id), r.preco, moedas,
+        Storage.requisitoRoupaOk(r.id), cor
+      );
+      const miolo = `
+        <img class="roupa-img" src="assets/herois/${r.file}.svg" alt="${esc(r.nome)}" loading="lazy">
+        <span class="roupa-nome">${esc(r.nome)}</span>`;
+      return cardLoja("data-roupa", r.id, miolo, info);
     }).join("");
+
+    const fxEquipado = Storage.efeitoEquipado();
+    const fxCards = EFEITOS.map((e) => {
+      const info = infoCard(
+        e.id === fxEquipado, Storage.possuiEfeito(e.id), e.preco, moedas, true, cor
+      );
+      const miolo = `
+        <span class="fx-icone">${e.icone}</span>
+        <span class="roupa-nome">${esc(e.nome)}</span>`;
+      return cardLoja("data-efeito", e.id, miolo, info);
+    }).join("");
+
     corpo.innerHTML = `
+      <div class="loja-tabs">${tabs}</div>
       <div class="loja-preview" style="--cor:${cor}">
-        <img src="assets/herois/${arquivoAvatar(equipada, heroId)}.svg" alt="${esc(heroi.nome)}">
+        <img src="assets/herois/${previewFile}.svg" alt="${esc(heroi.nome)}">${previewFx}
       </div>
-      <p class="loja-hero" style="color:${cor}">${esc(heroi.nome)}</p>
+      <p class="loja-hero" style="color:${cor}">${legenda}</p>
+      ${confirmar}
       <div class="loja-grid">${cards}</div>
-      <p class="loja-dica">Troque de personagem no 🔄 → avatar</p>`;
+      <p class="loja-sec">✨ Efeito de ataque <small>vale para todos os personagens</small></p>
+      <div class="loja-grid loja-grid-fx">${fxCards}</div>`;
   }
   function escolherRoupa(roupaId) {
-    const heroId = Storage.getHeroiId();
+    const heroId = lojaHeroiAtual();
     const roupa = typeof getRoupa === "function" ? getRoupa(roupaId) : null;
     if (!roupa) return;
-    if (roupa.id === Storage.roupaEquipada(heroId)) return;
     if (Storage.possuiRoupa(roupa.id)) {
-      Storage.equiparRoupa(heroId, roupa.id);
-      AudioFX.acerto();
-    } else if (Storage.getMoedas() >= roupa.preco) {
-      Storage.comprarRoupa(heroId, roupa.id, roupa.preco);
-      AudioFX.vitoria();
-    } else {
+      if (roupa.id !== Storage.roupaEquipada(heroId)) {
+        Storage.equiparRoupa(heroId, roupa.id);
+        AudioFX.acerto();
+      }
+      lojaSel = null;
+      return montarLoja();
+    }
+    // não possuída: 1º toque seleciona (preview); 2º toque confirma a compra
+    if (lojaSel && lojaSel.tipo === "roupa" && lojaSel.id === roupa.id) {
+      return comprarSelecionado();
+    }
+    lojaSel = { tipo: "roupa", id: roupa.id };
+    montarLoja();
+  }
+  function escolherEfeito(efeitoId) {
+    const efeito = typeof getEfeito === "function" ? getEfeito(efeitoId) : null;
+    if (!efeito || efeito.id !== efeitoId) return;
+    if (Storage.possuiEfeito(efeito.id)) {
+      if (efeito.id !== Storage.efeitoEquipado()) {
+        Storage.equiparEfeito(efeito.id);
+        AudioFX.acerto();
+      }
+      lojaSel = null;
+      return montarLoja();
+    }
+    if (lojaSel && lojaSel.tipo === "efeito" && lojaSel.id === efeito.id) {
+      return comprarSelecionado();
+    }
+    lojaSel = { tipo: "efeito", id: efeito.id };
+    montarLoja();
+  }
+  function comprarSelecionado() {
+    const item = itemSelecionado();
+    if (!item) return;
+    if (lojaSel.tipo === "roupa" && !Storage.requisitoRoupaOk(item.id)) {
       AudioFX.erro();
-      mostrarMsgLoja("Moedas insuficientes! Jogue mais pra ganhar. 🎮");
+      return mostrarMsgLoja(`🔒 Para desbloquear: ${item.requisito.desc}`);
+    }
+    const falta = item.preco - Storage.getMoedas();
+    if (falta > 0) {
+      AudioFX.erro();
+      return mostrarMsgLoja(`Faltam 🪙 ${falta} — jogue pra ganhar! 🎮`);
+    }
+    const ok = lojaSel.tipo === "roupa"
+      ? Storage.comprarRoupa(lojaHeroiAtual(), item.id, item.preco)
+      : Storage.comprarEfeito(item.id, item.preco);
+    if (!ok) {
+      AudioFX.erro();
       return;
     }
+    lojaSel = null;
+    AudioFX.vitoria();
     montarLoja();
+    celebrarCompra(item.nome);
+  }
+  /** Festinha da compra: mensagem + pulso no preview + chuva de confetes. */
+  function celebrarCompra(nome) {
+    mostrarMsgLoja(`🎉 ${nome} é sua!`);
+    const prev = document.querySelector("#screen-loja .loja-preview");
+    if (prev) {
+      prev.classList.add("pulsa");
+      setTimeout(() => prev.classList.remove("pulsa"), 600);
+    }
+    if (Util.reduzirMovimento()) return;
+    const card = document.querySelector("#screen-loja .ui-card");
+    if (!card) return;
+    const EMOJIS = ["✨", "🎉", "⭐", "💖", "🪙"];
+    for (let i = 0; i < 16; i++) {
+      const s = document.createElement("span");
+      s.className = "loja-confete";
+      s.textContent = EMOJIS[i % EMOJIS.length];
+      s.style.left = `${6 + Math.random() * 86}%`;
+      s.style.animationDelay = `${(Math.random() * 0.3).toFixed(2)}s`;
+      s.style.fontSize = `${16 + Math.round(Math.random() * 14)}px`;
+      card.appendChild(s);
+      setTimeout(() => s.remove(), 1800);
+    }
   }
 
   // ===================== MENU =====================
@@ -577,7 +719,9 @@ const UIScreens = (() => {
       case "jogar": case "grade": case "result-fases": return api.abrir("grade");
       case "progresso": return api.abrir("progresso");
       case "conquistas": return api.abrir("conquistas");
-      case "loja": return api.abrir("loja");
+      case "loja":
+        lojaHeroiSel = Storage.getHeroiId(); lojaSel = null; return api.abrir("loja");
+      case "loja-comprar": return comprarSelecionado();
       case "ajustes": return api.abrir("ajustes");
       case "exportar": return exportarProgresso();
       case "importar": {
@@ -674,12 +818,18 @@ const UIScreens = (() => {
 
       r.addEventListener("click", (ev) => {
         const alvo = ev.target.closest(
-          "[data-cfg],[data-roupa],[data-fase],[data-treino],[data-heroi],[data-perfil],[data-novoheroi],[data-acao]"
+          "[data-cfg],[data-roupa],[data-efeito],[data-lojaheroi],[data-fase],[data-treino],[data-heroi],[data-perfil],[data-novoheroi],[data-acao]"
         );
         if (!alvo || !r.contains(alvo)) return;
         AudioFX.unlock();
         if (alvo.dataset.cfg) return alternarAjuste(alvo.dataset.cfg);
         if (alvo.dataset.roupa) return escolherRoupa(alvo.dataset.roupa);
+        if (alvo.dataset.efeito) return escolherEfeito(alvo.dataset.efeito);
+        if (alvo.dataset.lojaheroi) {
+          lojaHeroiSel = +alvo.dataset.lojaheroi;
+          lojaSel = null;
+          return montarLoja();
+        }
         if (alvo.dataset.fase)
           return iniciarJogo("GameScene", { faseId: +alvo.dataset.fase, heroId: Storage.getHeroiId() });
         if (alvo.dataset.treino) {

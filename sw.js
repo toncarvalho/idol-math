@@ -2,7 +2,7 @@
  * Service Worker — cache do app shell para o jogo funcionar 100% offline
  * e carregar rápido. Estratégia cache-first com fallback de rede.
  */
-const CACHE = "idolmath-v20";
+const CACHE = "idolmath-v21";
 const ASSETS = [
   "./",
   "index.html",
@@ -22,6 +22,7 @@ const ASSETS = [
   "js/data/fases.js",
   "js/data/herois.js",
   "js/data/roupas.js",
+  "js/data/efeitos.js",
   "js/data/conquistas.js",
   "js/scenes/BootScene.js",
   "js/scenes/GameScene.js",
@@ -34,18 +35,28 @@ const ASSETS = [
   "assets/herois/rubi.svg",
   "assets/herois/rubi-festa.svg",
   "assets/herois/rubi-inverno.svg",
+  "assets/herois/rubi-neon.svg",
+  "assets/herois/rubi-dourada.svg",
   "assets/herois/lorena.svg",
   "assets/herois/lorena-rock.svg",
   "assets/herois/lorena-esporte.svg",
+  "assets/herois/lorena-galaxia.svg",
+  "assets/herois/lorena-dourada.svg",
   "assets/herois/mel.svg",
   "assets/herois/mel-diva.svg",
   "assets/herois/mel-verao.svg",
+  "assets/herois/mel-pop.svg",
+  "assets/herois/mel-dourada.svg",
   "assets/herois/leo.svg",
   "assets/herois/leo-aventura.svg",
   "assets/herois/leo-gamer.svg",
+  "assets/herois/leo-astro.svg",
+  "assets/herois/leo-dourada.svg",
   "assets/herois/priya.svg",
   "assets/herois/priya-festival.svg",
   "assets/herois/priya-esporte.svg",
+  "assets/herois/priya-show.svg",
+  "assets/herois/priya-dourada.svg",
   "assets/inimigos/inimigo-1.svg",
   "assets/inimigos/boss-1.svg",
   "assets/inimigos/inimigo-2.svg",

@@ -13,6 +13,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const code = readFileSync(join(__dirname, "../js/core/Storage.js"), "utf8");
 // globais usados pelo Storage: dados (roupas/conquistas/herois/JOGO) + MathEngine
 const codeRoupas = readFileSync(join(__dirname, "../js/data/roupas.js"), "utf8");
+const codeEfeitos = readFileSync(join(__dirname, "../js/data/efeitos.js"), "utf8");
 const codeConq = readFileSync(join(__dirname, "../js/data/conquistas.js"), "utf8");
 const codeHerois = readFileSync(join(__dirname, "../js/data/herois.js"), "utf8");
 const codeFases = readFileSync(join(__dirname, "../js/data/fases.js"), "utf8");
@@ -31,8 +32,8 @@ function makeLS(initial = {}) {
 function loadStorage(ls) {
   // dados + MathEngine definem globais usados pelo Storage
   const bundle =
-    codeHerois + "\n" + codeRoupas + "\n" + codeConq + "\n" + codeFases + "\n" +
-    codeMath + "\n" + code + "\nreturn Storage;";
+    codeHerois + "\n" + codeRoupas + "\n" + codeEfeitos + "\n" + codeConq + "\n" +
+    codeFases + "\n" + codeMath + "\n" + code + "\nreturn Storage;";
   return new Function("localStorage", bundle)(ls);
 }
 
@@ -193,6 +194,62 @@ function ok(cond, msg) {
   ok(S.roupaEquipada(1) === "heroi1", "pode reequipar a base");
   // comprar de novo (já possui) só equipa, sem cobrar
   ok(S.comprarRoupa(1, "rubi-festa", 60) === true && S.getMoedas() === 40, "reequipar não cobra");
+}
+
+// 10b) Efeitos de ataque: comprar, equipar, persistir
+{
+  const ls = makeLS();
+  const S = loadStorage(ls);
+  S.criarPerfil("Ana", 1);
+  ok(S.efeitoEquipado() === "fx-raio", "efeito padrão = raio");
+  ok(S.possuiEfeito("fx-raio") === true, "raio sempre possuído");
+  ok(S.possuiEfeito("fx-coracao") === false, "efeito pago não possuído no início");
+  ok(S.comprarEfeito("fx-coracao", 150) === false, "compra de efeito falha sem moedas");
+  S.addMoedas(200);
+  ok(S.comprarEfeito("fx-coracao", 150) === true, "compra de efeito ok com saldo");
+  ok(S.getMoedas() === 50, "moedas debitadas na compra do efeito");
+  ok(S.efeitoEquipado() === "fx-coracao", "compra já equipa o efeito");
+  S.equiparEfeito("fx-raio");
+  ok(S.efeitoEquipado() === "fx-raio", "pode reequipar o padrão");
+  ok(S.comprarEfeito("fx-coracao", 150) === true && S.getMoedas() === 50, "reequipar efeito não cobra");
+  // persiste entre instâncias (mesmo localStorage)
+  const S2 = loadStorage(ls);
+  ok(S2.efeitoEquipado() === "fx-coracao", "efeito equipado persiste");
+  ok(S2.possuiEfeito("fx-coracao") === true, "efeito possuído persiste");
+}
+
+// 10c) Roupa-troféu: requisito bloqueia a compra mesmo com saldo
+{
+  const ls = makeLS();
+  const S = loadStorage(ls);
+  S.criarPerfil("Bia", 1);
+  S.addMoedas(1000);
+  ok(S.requisitoRoupaOk("rubi-festa") === true, "roupa sem requisito sempre ok");
+  ok(S.requisitoRoupaOk("rubi-dourada") === false, "troféu bloqueado no início");
+  ok(S.comprarRoupa(1, "rubi-dourada", 300) === false, "compra bloqueada pelo requisito");
+  ok(S.getMoedas() === 1000, "saldo intacto na compra bloqueada");
+  for (let f = 1; f <= 12; f++) S.setEstrelas(f, 3); // 36 estrelas
+  ok(S.requisitosSnapshot().totalEstrelas === 36, "snapshot reflete as estrelas");
+  ok(S.requisitoRoupaOk("rubi-dourada") === true, "requisito cumprido (36 ⭐)");
+  ok(S.comprarRoupa(1, "rubi-dourada", 300) === true, "compra ok após cumprir o requisito");
+  ok(S.getMoedas() === 700, "debita o preço do troféu");
+}
+
+// 10d) requisitoAtendido (pura, todos os tipos de requisito)
+{
+  const { getRoupa: gr, requisitoAtendido: ra } = new Function(
+    codeRoupas + "\nreturn { getRoupa, requisitoAtendido };"
+  )();
+  ok(ra(gr("rubi-festa"), {}) === true, "sem requisito passa");
+  ok(ra(gr("rubi-dourada"), { totalEstrelas: 36 }) === true, "estrelas: cumpre");
+  ok(ra(gr("rubi-dourada"), { totalEstrelas: 35 }) === false, "estrelas: não cumpre");
+  ok(ra(gr("lorena-dourada"), { bossRush: true }) === true, "bossRush: cumpre");
+  ok(ra(gr("lorena-dourada"), {}) === false, "bossRush: não cumpre");
+  ok(ra(gr("mel-dourada"), { melhorOfensiva: 7 }) === true, "ofensiva: cumpre");
+  ok(ra(gr("mel-dourada"), { melhorOfensiva: 6 }) === false, "ofensiva: não cumpre");
+  ok(ra(gr("leo-dourada"), { maxCombo: 15 }) === true, "combo: cumpre");
+  ok(ra(gr("priya-dourada"), { acertos: 300 }) === true, "acertos: cumpre");
+  ok(ra(gr("priya-dourada"), { acertos: 299 }) === false, "acertos: não cumpre");
 }
 
 // 11) Conquistas: avaliar desbloqueia + credita uma vez

@@ -46,6 +46,7 @@ class BootScene extends Phaser.Scene {
     this.gerarFundo();
     this.gerarBrilho();
     this.gerarRaio();
+    this.gerarEfeitos();
     // Navegação é HTML (overlay): abre o menu (ou a criação de perfil).
     // A BootScene fica como cena "host" ociosa por baixo do overlay; o gameplay
     // (GameScene/TrainScene) é iniciado sob demanda pelo UIScreens.
@@ -123,6 +124,62 @@ class BootScene extends Phaser.Scene {
     ctx.closePath();
     ctx.fillStyle = "#2ff7e6";
     ctx.shadowColor = "#2ff7e6";
+    ctx.shadowBlur = 10;
+    ctx.fill();
+    tex.refresh();
+  }
+
+  /**
+   * Projéteis alternativos do golpe (efeitos de ataque da loja — EFEITOS).
+   * Mesmo formato do raio: canvas pequeno com glow, sem asset externo.
+   */
+  gerarEfeitos() {
+    // 💗 coração
+    this.desenharEfeito("fx-coracao", "#ff3ea5", (ctx) => {
+      ctx.beginPath();
+      ctx.moveTo(24, 20);
+      ctx.bezierCurveTo(24, 12, 12, 8, 8, 18);
+      ctx.bezierCurveTo(4, 28, 14, 38, 24, 46);
+      ctx.bezierCurveTo(34, 38, 44, 28, 40, 18);
+      ctx.bezierCurveTo(36, 8, 24, 12, 24, 20);
+      ctx.closePath();
+    });
+    // 🌟 estrela de 5 pontas
+    this.desenharEfeito("fx-estrela", "#ffd23e", (ctx) => {
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const r = i % 2 === 0 ? 22 : 9;
+        const a = -Math.PI / 2 + (i * Math.PI) / 5;
+        const x = 24 + r * Math.cos(a);
+        const y = 26 + r * Math.sin(a);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+    });
+    // 🎵 nota musical (haste + bandeira + cabeça)
+    this.desenharEfeito("fx-nota", "#b06cff", (ctx) => {
+      ctx.beginPath();
+      ctx.ellipse(17, 42, 9, 6.5, -0.35, 0, Math.PI * 2);
+      ctx.moveTo(25, 42);
+      ctx.lineTo(25, 8);
+      ctx.lineTo(29, 8);
+      ctx.lineTo(29, 42);
+      ctx.closePath();
+      ctx.moveTo(25, 8);
+      ctx.quadraticCurveTo(40, 12, 38, 26);
+      ctx.quadraticCurveTo(34, 18, 25, 17);
+      ctx.closePath();
+    });
+  }
+
+  desenharEfeito(chave, cor, tracar) {
+    const s = 52;
+    const tex = this.textures.createCanvas(chave, s, s);
+    const ctx = tex.getContext();
+    tracar(ctx);
+    ctx.fillStyle = cor;
+    ctx.shadowColor = cor;
     ctx.shadowBlur = 10;
     ctx.fill();
     tex.refresh();

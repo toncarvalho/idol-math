@@ -41,7 +41,10 @@ resposta certa para atacar, encadeie **combos**, não perca suas **vidas** ❤�
 - 🏅 **Conquistas**: medalhas por marcos (combo x10, show perfeito, mestre do 7, imperatriz…),
   cada uma rende **moedas**.
 - 🪙 **Moedas & 🛍️ Loja**: ganhe moedas jogando e desbloqueie **roupas** para os personagens
-  (cada roupa troca a figura); a roupa equipada aparece no HUD e no menu.
+  (cada roupa troca a figura; a equipada aparece no HUD e no menu) e **efeitos de ataque**
+  (o projétil do golpe: raio, coração, estrela, nota). A loja tem abas de personagem,
+  preview antes de comprar (compra em 2 toques) e roupas-troféu **Douradas** que além
+  de moedas exigem um feito do jogo (36 ⭐, Boss Rush, ofensiva de 7 dias…).
 - 💾 **Backup do progresso**: exporte/importe todos os jogadores num arquivo JSON
   (em **Ajustes**) — útil para trocar de aparelho ou se o navegador limpar os dados.
 - ⏸️ **Pausa**, **dica no erro** (mostra a conta certa) e **transições suaves**.
@@ -86,11 +89,13 @@ css/ui.css            # estilos das telas HTML (menu, fases, loja…)
 js/main.js            # configuração do Phaser (Scale.FIT, retrato)
 js/data/fases.js      # ⭐ FASES + config global JOGO (mecânica, pontos, moedas)
 js/data/herois.js     # 🦸 HEROIS (figura + cor + nome) — cosméticos
-js/data/roupas.js     # 🛍️ roupas da loja (por herói)
+js/data/roupas.js     # 🛍️ roupas da loja (por herói; Douradas têm `requisito`)
+js/data/efeitos.js    # ✨ efeitos de ataque da loja (projétil do golpe)
 js/data/conquistas.js # 🏅 conquistas (condição + recompensa)
 assets/herois/*.svg   # figuras dos personagens (DiceBear / Avataaars)
 assets/inimigos/*.svg # figuras dos inimigos e chefões (flat neon; fallback: emoji)
 tools/gerar-inimigos.mjs # gerador das figuras dos inimigos (node tools/gerar-inimigos.mjs)
+tools/gerar-roupas.mjs   # gerador das roupas tiers 180/300 (node tools/gerar-roupas.mjs)
 js/core/MathEngine.js # geração de perguntas e alternativas (puro, testável)
 js/core/Regras.js     # fórmulas de pontos/estrelas/moedas (puro, testável)
 js/core/Audio.js      # música + efeitos sonoros (Web Audio)

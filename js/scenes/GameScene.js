@@ -319,7 +319,9 @@ class GameScene extends Phaser.Scene {
         ease: "Quad.out",
       });
     }
-    const raio = this.add.image(this.heroiCont.x + 48, this.heroiCont.y - 30, "raio").setDepth(60);
+    // textura do projétil = efeito de ataque equipado na loja (padrão: raio)
+    const texFx = typeof texturaEfeito === "function" ? texturaEfeito() : "raio";
+    const raio = this.add.image(this.heroiCont.x + 48, this.heroiCont.y - 30, texFx).setDepth(60);
     raio.setRotation(
       Phaser.Math.Angle.Between(this.heroiCont.x, this.heroiCont.y, alvoX, alvoY) + Math.PI / 2
     );

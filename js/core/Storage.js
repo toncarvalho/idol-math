@@ -30,7 +30,8 @@ const Storage = (() => {
     estat: { acertos: 0, erros: 0, tempoMs: 0, maxCombo: 0, semErroVitorias: 0 },
     moedas: 0, // economia (loja de roupas)
     conquistas: {}, // { id: true } desbloqueadas
-    cosmeticos: { possui: [], roupa: {} }, // possui: [roupaId]; roupa: { heroId: roupaId }
+    // possui: [roupaId|efeitoId]; roupa: { heroId: roupaId }; efeito: id equipado (por perfil)
+    cosmeticos: { possui: [], roupa: {}, efeito: null },
     desafio: { ultimoDia: null, ofensiva: 0, melhorOfensiva: 0 }, // desafio diário
   });
 
@@ -379,7 +380,27 @@ const Storage = (() => {
       return true;
     },
 
-    // ===================== ROUPAS (loja) =====================
+    // ===================== ROUPAS / EFEITOS (loja) =====================
+    /**
+     * Snapshot do progresso para avaliar `requisito` de roupas-troféu
+     * (requisitoAtendido em roupas.js) — mesmo formato nos testes.
+     */
+    requisitosSnapshot() {
+      const e = state.estat || {};
+      return {
+        totalEstrelas: this.totalEstrelas(),
+        bossRush: !!state.bossRush,
+        melhorOfensiva: (state.desafio && state.desafio.melhorOfensiva) || 0,
+        maxCombo: e.maxCombo || 0,
+        acertos: e.acertos || 0,
+      };
+    },
+    /** O requisito da roupa foi cumprido pelo perfil atual? (sem requisito = sim) */
+    requisitoRoupaOk(roupaId) {
+      const r = typeof getRoupa === "function" ? getRoupa(roupaId) : null;
+      if (!r || typeof requisitoAtendido !== "function") return true;
+      return requisitoAtendido(r, this.requisitosSnapshot());
+    },
     roupaEquipada(heroId) {
       const eq = state.cosmeticos && state.cosmeticos.roupa && state.cosmeticos.roupa[heroId];
       if (eq) return eq;
@@ -397,6 +418,7 @@ const Storage = (() => {
         this.equiparRoupa(heroId, roupaId);
         return true;
       }
+      if (!this.requisitoRoupaOk(roupaId)) return false; // troféu ainda bloqueado
       if ((state.moedas || 0) < preco) return false;
       state.moedas -= preco;
       state.cosmeticos.possui.push(roupaId);
@@ -407,6 +429,36 @@ const Storage = (() => {
     equiparRoupa(heroId, roupaId) {
       if (!state.cosmeticos) state.cosmeticos = { possui: [], roupa: {} };
       state.cosmeticos.roupa[heroId] = roupaId;
+      salvarSave();
+    },
+    /** Efeito de ataque equipado no perfil (id de EFEITOS; padrão = grátis). */
+    efeitoEquipado() {
+      const eq = state.cosmeticos && state.cosmeticos.efeito;
+      if (eq) return eq;
+      return typeof efeitoBase === "function" ? efeitoBase().id : "fx-raio";
+    },
+    possuiEfeito(efeitoId) {
+      const e = typeof getEfeito === "function" ? getEfeito(efeitoId) : null;
+      if (e && e.preco === 0) return true; // padrão sempre possuído
+      return !!(state.cosmeticos && state.cosmeticos.possui.indexOf(efeitoId) !== -1);
+    },
+    /** Compra (debita moedas) e já equipa o efeito. Retorna true se efetivou. */
+    comprarEfeito(efeitoId, preco) {
+      if (!state.cosmeticos) state.cosmeticos = { possui: [], roupa: {} };
+      if (this.possuiEfeito(efeitoId)) {
+        this.equiparEfeito(efeitoId);
+        return true;
+      }
+      if ((state.moedas || 0) < preco) return false;
+      state.moedas -= preco;
+      state.cosmeticos.possui.push(efeitoId);
+      state.cosmeticos.efeito = efeitoId;
+      salvarSave();
+      return true;
+    },
+    equiparEfeito(efeitoId) {
+      if (!state.cosmeticos) state.cosmeticos = { possui: [], roupa: {} };
+      state.cosmeticos.efeito = efeitoId;
       salvarSave();
     },
 
