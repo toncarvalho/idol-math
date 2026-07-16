@@ -1,8 +1,8 @@
 /**
  * UIScreens — camada de navegação em HTML sobreposta ao canvas do Phaser.
  *
- * Toda a navegação (Menu, Perfis, Herói, Grade de fases, Ajustes, Conquistas,
- * Progresso, Loja, Resultado) é HTML real — botões <button>/<input> nativos,
+ * Toda a navegação (Menu, Perfis, Herói, Mundos, Grade de fases, Ajustes,
+ * Conquistas, Progresso, Loja, Resultado) é HTML real — botões <button>/<input> nativos,
  * acessíveis, sem os bugs de área de toque do canvas. O Phaser roda apenas o
  * gameplay (GameScene/TrainScene); ao terminar, a cena devolve o controle para
  * este overlay. A BootScene gera as texturas e chama UIScreens.irInicio().
@@ -19,6 +19,7 @@ const UIScreens = (() => {
   let perfilParaRemover = null;
   let lojaHeroiSel = null;        // herói exibido na loja (abas de personagem)
   let lojaSel = null;             // item aguardando confirmação: { tipo: "roupa"|"efeito", id }
+  let mundoSel = "tabuada";       // mundo exibido na grade de fases
 
   // ----- helpers -----
   function root() {
@@ -462,27 +463,63 @@ const UIScreens = (() => {
       <p class="menu-stats">🗺️ ${FASES.length} fases  ·  ⭐ ${Storage.totalEstrelas()}/${FASES.length * 3}  ·  🏆 ${Storage.get().melhorPontuacao}</p>`;
   }
 
-  // ===================== GRADE DE FASES =====================
+  // ===================== MUNDOS (seleção de habilidade) =====================
+  function estrelasDoMundo(mundoId) {
+    return fasesDoMundo(mundoId).reduce((s, f) => s + Storage.getEstrelas(f.id), 0);
+  }
+  function montarMundos() {
+    const sub = document.getElementById("mundos-sub");
+    if (sub) sub.textContent = "Qual habilidade você vai treinar?";
+    const corpo = document.getElementById("mundos-corpo");
+    if (!corpo) return;
+    corpo.innerHTML = MUNDOS.map((m) => {
+      const cor = corHex(m.cor);
+      // mundo ainda em construção: prévia não-clicável (mostra o que vem aí)
+      if (m.emBreve) {
+        return `
+          <div class="mundo-row breve" style="--cor:${cor}">
+            <span class="mundo-emoji">${m.emoji}</span>
+            <span class="mundo-info"><b>${esc(m.nome)}</b><small>${esc(m.descricao)}</small></span>
+            <span class="mundo-breve">🚧 Em breve</span>
+          </div>`;
+      }
+      const fases = fasesDoMundo(m.id);
+      return `
+        <button class="mundo-row" type="button" data-mundo="${m.id}" style="--cor:${cor}">
+          <span class="mundo-emoji">${m.emoji}</span>
+          <span class="mundo-info"><b style="color:${cor}">${esc(m.nome)}</b><small>${esc(m.descricao)}</small></span>
+          <span class="mundo-prog">⭐ ${estrelasDoMundo(m.id)}/${fases.length * 3}</span>
+        </button>`;
+    }).join("");
+  }
+
+  // ===================== GRADE DE FASES (do mundo selecionado) =====================
   function rotuloFoco(fase) {
     const t = fase.tabuadas;
+    if (!t) return fase.foco || ""; // mundos futuros declaram `foco` na fase
     if (t.length >= 10) return "Mix";
     if (t.length === 1) return `Tab. ${t[0]}`;
     return `Tab. ${t[0]}–${t[t.length - 1]}`;
   }
   function montarGrade() {
-    const faseMax = Storage.faseMax();
+    const mundo = getMundo(mundoSel) || getMundo("tabuada");
+    const fases = fasesDoMundo(mundo.id);
+    const faseMax = Storage.faseMax(mundo.id);
+    const titulo = document.getElementById("grade-titulo");
+    if (titulo) titulo.textContent = `${mundo.emoji} ${mundo.nome.toUpperCase()}`;
     const sub = document.getElementById("grade-sub");
-    if (sub) sub.textContent = `Cada fase treina uma tabuada  ·  ⭐ ${Storage.totalEstrelas()}`;
-    const tiles = FASES.map((f) => {
-      const desbloqueada = f.id <= faseMax;
+    if (sub) sub.textContent = `${mundo.descricao}  ·  ⭐ ${estrelasDoMundo(mundo.id)}`;
+    const tiles = fases.map((f, i) => {
+      const num = i + 1; // posição no mundo (na Tabuada, igual ao id)
+      const desbloqueada = num <= faseMax;
       if (!desbloqueada) {
-        return `<div class="fase-tile bloq"><span class="ft-num">${f.id}</span><span class="ft-lock">🔒</span></div>`;
+        return `<div class="fase-tile bloq"><span class="ft-num">${num}</span><span class="ft-lock">🔒</span></div>`;
       }
       const e = Storage.getEstrelas(f.id);
       const estr = "★".repeat(e) + "☆".repeat(3 - e);
       return `
         <button class="fase-tile" type="button" data-fase="${f.id}" style="--cor:${corHex(f.corTema)}">
-          <span class="ft-num">${f.id}</span>
+          <span class="ft-num">${num}</span>
           <span class="ft-emo"><img src="assets/inimigos/boss-${f.id}.svg" alt=""
             onerror="this.parentNode.textContent='${f.boss.emoji}'"></span>
           <span class="ft-foco">${rotuloFoco(f)}</span>
@@ -491,7 +528,8 @@ const UIScreens = (() => {
     }).join("");
     const corpo = document.getElementById("grade-corpo");
     if (!corpo) return;
-    const bossRush = Storage.bossRushDesbloqueado()
+    // Boss Rush é dos chefões da Tabuada — só aparece nesse mundo
+    const bossRush = mundo.id === "tabuada" && Storage.bossRushDesbloqueado()
       ? `<button class="ui-btn grade-boss" type="button" data-acao="bossrush">💀  BOSS RUSH</button>` : "";
     corpo.innerHTML = `<div class="grade-tiles">${tiles}</div>${bossRush}`;
   }
@@ -748,6 +786,7 @@ const UIScreens = (() => {
   // ----- builders por tela -----
   const BUILDERS = {
     menu: montarMenu,
+    mundos: montarMundos,
     grade: montarGrade,
     perfis: montarPerfis,
     heroi: montarHeroi,
@@ -764,7 +803,12 @@ const UIScreens = (() => {
   function rotear(acao) {
     switch (acao) {
       case "menu": case "voltar": return api.abrir("menu");
-      case "jogar": case "grade": case "result-fases": return api.abrir("grade");
+      case "jogar": case "mundos": return api.abrir("mundos");
+      case "grade": return api.abrir("grade");
+      case "result-fases":
+        // volta para a grade do mundo da fase que acabou de ser jogada
+        mundoSel = mundoDaFase(getFase(dadosResultado.faseId));
+        return api.abrir("grade");
       case "progresso": return api.abrir("progresso");
       case "conquistas": return api.abrir("conquistas");
       case "loja":
@@ -803,8 +847,11 @@ const UIScreens = (() => {
       case "apagar-perfil": return apagarPerfil();
       case "cancelar-apagar":
         modoPerfil = "selecao"; return api.abrir("perfis");
-      case "result-proxima":
-        return iniciarJogo("GameScene", { faseId: dadosResultado.faseId + 1, heroId: dadosResultado.heroId });
+      case "result-proxima": {
+        const prox = proximaFase(dadosResultado.faseId); // seguinte no mesmo mundo
+        if (!prox) return api.abrir("menu");
+        return iniciarJogo("GameScene", { faseId: prox.id, heroId: dadosResultado.heroId });
+      }
       case "result-replay":
         return iniciarJogo("GameScene", { faseId: dadosResultado.faseId, heroId: dadosResultado.heroId, bossRush: dadosResultado.bossRush });
       case "result-diario-replay":
@@ -828,6 +875,12 @@ const UIScreens = (() => {
       const input = r.querySelector(`#screen-${nome} input`);
       const primeiro = input || r.querySelector(`#screen-${nome} button`);
       if (primeiro) primeiro.focus({ preventScroll: true });
+    },
+
+    /** abre a grade de fases de um mundo (gameplay: pausa → Fases) */
+    abrirGrade(mundoId) {
+      if (mundoId && getMundo(mundoId)) mundoSel = mundoId;
+      api.abrir("grade");
     },
 
     /** esconde o overlay (usado ao entrar no gameplay) */
@@ -866,7 +919,7 @@ const UIScreens = (() => {
 
       r.addEventListener("click", (ev) => {
         const alvo = ev.target.closest(
-          "[data-cfg],[data-roupa],[data-efeito],[data-lojaheroi],[data-pet],[data-fase],[data-treino],[data-heroi],[data-perfil],[data-novoheroi],[data-acao]"
+          "[data-cfg],[data-roupa],[data-efeito],[data-lojaheroi],[data-pet],[data-mundo],[data-fase],[data-treino],[data-heroi],[data-perfil],[data-novoheroi],[data-acao]"
         );
         if (!alvo || !r.contains(alvo)) return;
         AudioFX.unlock();
@@ -879,8 +932,14 @@ const UIScreens = (() => {
           lojaSel = null;
           return montarLoja();
         }
+        if (alvo.dataset.mundo) {
+          mundoSel = alvo.dataset.mundo;
+          return api.abrir("grade");
+        }
+        // id de fase pode ser number (Tabuada) ou string ("s1"...) — não coagir
+        // com +; getFase compara por String.
         if (alvo.dataset.fase)
-          return iniciarJogo("GameScene", { faseId: +alvo.dataset.fase, heroId: Storage.getHeroiId() });
+          return iniciarJogo("GameScene", { faseId: alvo.dataset.fase, heroId: Storage.getHeroiId() });
         if (alvo.dataset.treino) {
           const n = +alvo.dataset.treino;
           return iniciarJogo("TrainScene", { tabuadas: [n], titulo: `Tabuada do ${n}` });

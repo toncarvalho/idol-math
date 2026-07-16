@@ -10,8 +10,10 @@ import { dirname, join } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const codeFases = readFileSync(join(__dirname, "../js/data/fases.js"), "utf8");
 const codeRegras = readFileSync(join(__dirname, "../js/core/Regras.js"), "utf8");
-const { Regras, JOGO, FASES, MECANICAS_CHEFAO } = new Function(
-  codeFases + "\n" + codeRegras + "\nreturn { Regras, JOGO, FASES, MECANICAS_CHEFAO };"
+const { Regras, JOGO, FASES, MECANICAS_CHEFAO, MUNDOS,
+        getFase, mundoDaFase, fasesDoMundo, indiceFase, proximaFase } = new Function(
+  codeFases + "\n" + codeRegras +
+    "\nreturn { Regras, JOGO, FASES, MECANICAS_CHEFAO, MUNDOS, getFase, mundoDaFase, fasesDoMundo, indiceFase, proximaFase };"
 )();
 
 let falhas = 0;
@@ -101,6 +103,25 @@ ok(
   FASES.some((f) => f.boss.mecanica),
   "há chefões com mecânica especial declarada"
 );
+
+// MUNDOS: consistência da estrutura e regras de segurança do save
+ok(new Set(MUNDOS.map((m) => m.id)).size === MUNDOS.length, "ids de mundo únicos");
+ok(new Set(FASES.map((f) => String(f.id))).size === FASES.length, "ids de fase únicos");
+ok(
+  FASES.every((f) => MUNDOS.some((m) => m.id === mundoDaFase(f))),
+  "toda fase pertence a um mundo existente"
+);
+const tabuada = MUNDOS.find((m) => m.id === "tabuada");
+ok(!!tabuada && !tabuada.emBreve, "mundo Tabuada existe e está jogável");
+// SAVE: as 12 fases da Tabuada mantêm os ids 1–12, em ordem, para sempre
+const ft = fasesDoMundo("tabuada");
+ok(ft.length === 12, "Tabuada tem 12 fases");
+ok(ft.every((f, i) => f.id === i + 1), "ids da Tabuada são 1–12 em ordem (save)");
+ok(ft.every((f) => indiceFase(f.id) === f.id), "na Tabuada, índice === id (save legado)");
+// navegação entre fases (dentro do mundo)
+ok(proximaFase(1).id === 2, "próxima da fase 1 é a 2");
+ok(proximaFase(12) === null, "última fase do mundo não tem próxima");
+ok(getFase("3").id === 3, "getFase aceita id como string (dataset HTML)");
 
 if (falhas) {
   console.error(`\n❌ Regras: ${falhas} verificação(ões) falharam.`);

@@ -1,11 +1,17 @@
 /**
  * Dados do jogo (data-driven).
  *
- * Progressão por TABUADA: a dificuldade vem da fase (qual tabuada é treinada).
- * A mecânica (velocidade, intervalo do fator, força do chefão) é CONSTANTE em
- * todas as fases — só a tabuada muda. Ajuste tudo isso em JOGO.
+ * O jogo é organizado em MUNDOS (habilidades matemáticas); cada fase pertence
+ * a um mundo. Dentro de um mundo, a dificuldade vem da fase (qual conteúdo é
+ * treinado). A mecânica (velocidade, intervalo do fator, força do chefão) é
+ * CONSTANTE em todas as fases — só o conteúdo muda. Ajuste tudo isso em JOGO.
  *
  * Para adicionar/editar uma fase, mexa em FASES.
+ *
+ * REGRAS DE SEGURANÇA DO SAVE (invioláveis — progresso salvo por faseId):
+ *  - As fases da Tabuada mantêm os ids 1–12 para sempre; nunca renumerar.
+ *  - Fases de mundos novos usam ids string próprios (ex.: "s1".., "d1"..).
+ *  - A ordem dentro do array FASES define a progressão do mundo.
  */
 
 /** Config global (mecânica constante entre as fases). */
@@ -67,8 +73,42 @@ function getMecanicaChefao(fase) {
 }
 
 /**
+ * MUNDOS — cada um cobre uma habilidade matemática, na ordem pedagógica da
+ * escola (Soma & Subtração vem ANTES da Tabuada). Mundos com `emBreve: true`
+ * aparecem na seleção como prévia, mas ainda não têm fases jogáveis.
+ * `cor` tinge o card na seleção de mundos.
+ */
+const MUNDOS = [
+  {
+    id: "soma",
+    nome: "Soma & Subtração",
+    emoji: "🌟",
+    descricao: "Contas de mais e de menos (1º–2º ano)",
+    cor: 0x36d96b,
+    emBreve: true,
+  },
+  {
+    id: "tabuada",
+    nome: "Tabuada",
+    emoji: "🎤",
+    descricao: "Multiplicação do 1 ao 10 (3º ano)",
+    cor: 0xff3ea5,
+  },
+  {
+    id: "divisao",
+    nome: "Divisão",
+    emoji: "⚡",
+    descricao: "A tabuada ao contrário (4º ano)",
+    cor: 0x3ea5ff,
+    emBreve: true,
+  },
+];
+
+/**
  * 12 fases. Cada inimigo comum precisa de 1 acerto; o chefão tem JOGO.bossHp.
  * corTema é usada no fundo/HUD da fase. `tabuadas` define o foco da fase.
+ * `mundo` liga a fase a um MUNDOS.id — fases sem o campo pertencem à
+ * "tabuada" (as 12 originais, anteriores aos mundos; ver mundoDaFase).
  */
 const FASES = [
   {
@@ -181,11 +221,48 @@ const FASES = [
   },
 ];
 
+/** Ids de fase podem ser number (Tabuada, 1–12) ou string ("s1", "d1"...) —
+ *  a comparação é sempre por String para o dataset HTML funcionar igual. */
 function getFase(id) {
-  return FASES.find((f) => f.id === id) || FASES[0];
+  return FASES.find((f) => String(f.id) === String(id)) || FASES[0];
 }
 
-/** Existe uma fase com este id? (usado para "próxima fase"). */
+/** Existe uma fase com este id? */
 function existeFase(id) {
-  return FASES.some((f) => f.id === id);
+  return FASES.some((f) => String(f.id) === String(id));
+}
+
+// ===================== MUNDOS (helpers) =====================
+
+/** Mundo (id) ao qual a fase pertence — sem o campo, é a "tabuada". */
+function mundoDaFase(fase) {
+  return (fase && fase.mundo) || "tabuada";
+}
+
+function getMundo(mundoId) {
+  return MUNDOS.find((m) => m.id === mundoId) || null;
+}
+
+/** Fases de um mundo, na ordem de progressão (a ordem do array FASES). */
+function fasesDoMundo(mundoId) {
+  return FASES.filter((f) => mundoDaFase(f) === mundoId);
+}
+
+/**
+ * Posição (1-based) da fase dentro do seu mundo — é o número mostrado no tile
+ * e a unidade de progresso salva por mundo (Storage.faseMax/desbloquearFase).
+ * Para a Tabuada, índice === id (ids 1–12 em ordem), o que mantém os saves
+ * antigos (faseDesbloqueada numérica) válidos sem migração.
+ */
+function indiceFase(faseId) {
+  const f = getFase(faseId);
+  return fasesDoMundo(mundoDaFase(f)).findIndex((x) => String(x.id) === String(f.id)) + 1;
+}
+
+/** A fase seguinte DENTRO do mesmo mundo, ou null se era a última. */
+function proximaFase(faseId) {
+  const f = getFase(faseId);
+  const lista = fasesDoMundo(mundoDaFase(f));
+  const i = lista.findIndex((x) => String(x.id) === String(f.id));
+  return i >= 0 && i + 1 < lista.length ? lista[i + 1] : null;
 }

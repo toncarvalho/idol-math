@@ -164,6 +164,25 @@ function ok(cond, msg) {
   ok(!ls.has("idolmath.save.v2"), "migração: save antigo removido");
 }
 
+// 8b) Progresso por MUNDO: a Tabuada segue no campo legado (saves antigos ok);
+//     mundos futuros usam `mundos[mundoId]`; um não interfere no outro
+{
+  const ls = makeLS();
+  const S = loadStorage(ls);
+  S.criarPerfil("Ana", 1);
+  ok(S.faseMax() === 1, "tabuada começa na fase 1");
+  ok(S.faseMax("tabuada") === 1, "faseMax('tabuada') = faseMax()");
+  ok(S.faseMax("soma") === 1, "mundo futuro começa na fase 1");
+  S.desbloquearFase(5); // fase 5 da Tabuada (id numérico legado)
+  ok(S.faseMax() === 5, "desbloquearFase avança a tabuada");
+  ok(S.faseMax("soma") === 1, "tabuada não avança outros mundos");
+  S.desbloquearFase(3);
+  ok(S.faseMax() === 5, "desbloquear fase menor não regride");
+  // save antigo (só faseDesbloqueada numérica) continua válido
+  const raw = JSON.parse(ls.getItem(`idolmath.save.${S.perfilAtual().id}`));
+  ok(raw.faseDesbloqueada === 5, "progresso da tabuada gravado no campo legado");
+}
+
 // 9) Moedas
 {
   const ls = makeLS();

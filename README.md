@@ -116,15 +116,20 @@ assets/icon.svg       # ícone do app
 
 ## ➕ Como adicionar / ajustar fases
 
-Tudo é orientado a dados em **`js/data/fases.js`**. A **dificuldade vem da tabuada**:
-cada fase define `tabuadas`. A mecânica (velocidade, intervalo do fator, força do chefão)
-é **constante** e fica na config global `JOGO` — só a tabuada muda entre fases.
+Tudo é orientado a dados em **`js/data/fases.js`**. O jogo é organizado em
+**mundos** (array `MUNDOS`: Soma & Subtração, Tabuada, Divisão), e cada fase
+pertence a um mundo. A **dificuldade vem do conteúdo da fase** (na Tabuada,
+`tabuadas`). A mecânica (velocidade, intervalo do fator, força do chefão)
+é **constante** e fica na config global `JOGO` — só o conteúdo muda entre fases.
 
 Para uma nova fase, acrescente um objeto ao array `FASES`:
 
 ```js
 {
-  id: 13,
+  id: 13,                   // Tabuada usa ids 1–12 (NUNCA renumerar — o save
+                            // guarda estrelas por id); mundos novos usam ids
+                            // string próprios ("s1", "d1"…)
+  mundo: "tabuada",         // MUNDOS.id (fases sem o campo são da "tabuada")
   nome: "Nome da Fase",
   descricao: "Uma frase de atmosfera.",
   tabuadas: [3, 6, 9],      // foco da fase (quais tabuadas treinar)
@@ -136,7 +141,8 @@ Para uma nova fase, acrescente um objeto ao array `FASES`:
 }
 ```
 
-A fase aparece automaticamente na grade e na progressão. Para mexer na mecânica de
+A fase aparece automaticamente na grade do seu mundo e na progressão (a ordem
+no array `FASES` é a ordem de jogo dentro do mundo). Para mexer na mecânica de
 todas as fases (timer, intervalo do segundo fator, nº de inimigos, HP do chefão),
 edite a config `JOGO` no topo do mesmo arquivo:
 

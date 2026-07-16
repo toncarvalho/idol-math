@@ -5,7 +5,8 @@
  * Chaves:
  *  - idolmath.perfis.v1 → { atual: id|null, perfis: [{ id, nome, heroiId, criadoEm }] }
  *  - idolmath.save.<id> → progresso POR perfil
- *      { melhorPontuacao, faseDesbloqueada, estrelas:{}, fatos:{}, bossRush }
+ *      { melhorPontuacao, faseDesbloqueada (Tabuada), mundos:{}, estrelas:{},
+ *        fatos:{}, bossRush }
  *  - idolmath.config.v1 → configuração GLOBAL do aparelho (compartilhada)
  *      { musica, efeitos, timer, voz }
  *
@@ -23,7 +24,8 @@ const Storage = (() => {
   // ---------- defaults ----------
   const defaultsSave = () => ({
     melhorPontuacao: 0,
-    faseDesbloqueada: 1, // maior fase desbloqueada (1-based)
+    faseDesbloqueada: 1, // progresso do mundo TABUADA (índice 1-based; nome legado)
+    mundos: {}, // { mundoId: índice desbloqueado } dos DEMAIS mundos (soma, divisão)
     estrelas: {}, // { faseId: 0..3 } melhor estrela por fase
     fatos: {}, // { "min x max": peso }  peso alto = errou mais (repetir mais)
     bossRush: false, // desbloqueado ao zerar a última fase
@@ -247,14 +249,33 @@ const Storage = (() => {
         salvarSave();
       }
     },
+    /**
+     * Desbloqueia a fase no progresso do MUNDO dela (unidade: índice 1-based
+     * dentro do mundo — indiceFase em fases.js). O mundo Tabuada continua no
+     * campo legado `faseDesbloqueada` (índice === id 1–12, saves antigos ok);
+     * os demais mundos ficam em `mundos[mundoId]`.
+     */
     desbloquearFase(faseId) {
-      if (faseId > (state.faseDesbloqueada || 1)) {
-        state.faseDesbloqueada = faseId;
+      const mundo = mundoDaFase(getFase(faseId));
+      const idx = indiceFase(faseId);
+      if (mundo === "tabuada") {
+        if (idx > (state.faseDesbloqueada || 1)) {
+          state.faseDesbloqueada = idx;
+          salvarSave();
+        }
+        return;
+      }
+      if (!state.mundos) state.mundos = {};
+      if (idx > (state.mundos[mundo] || 1)) {
+        state.mundos[mundo] = idx;
         salvarSave();
       }
     },
-    faseMax() {
-      return state.faseDesbloqueada || 1;
+    /** Maior índice (1-based) desbloqueado no mundo (padrão: Tabuada). */
+    faseMax(mundoId) {
+      const m = mundoId || "tabuada";
+      if (m === "tabuada") return state.faseDesbloqueada || 1;
+      return (state.mundos && state.mundos[m]) || 1;
     },
 
     // ===================== HERÓI (avatar do perfil) =====================

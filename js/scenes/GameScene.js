@@ -108,7 +108,7 @@ class GameScene extends Phaser.Scene {
       fases: () => {
         this.retomar(); // despausa relógio/tweens ANTES do stop (ver init)
         GameUI.sair();
-        UIScreens.abrir("grade");
+        UIScreens.abrirGrade(mundoDaFase(this.fase)); // grade do mundo da fase
         this.scene.stop();
       },
       menu: () => {
@@ -964,10 +964,11 @@ class GameScene extends Phaser.Scene {
       Storage.desbloquearBossRush();
     } else {
       Storage.setEstrelas(this.fase.id, estrelas);
-      const proxima = this.fase.id + 1;
-      temProxima = existeFase(proxima);
-      if (temProxima) Storage.desbloquearFase(proxima);
-      else Storage.desbloquearBossRush(); // zerou a última → libera Boss Rush
+      const proxima = proximaFase(this.fase.id); // seguinte DENTRO do mundo
+      temProxima = !!proxima;
+      if (temProxima) Storage.desbloquearFase(proxima.id);
+      // zerou a última da Tabuada → libera Boss Rush (é dos chefões da tabuada)
+      else if (mundoDaFase(this.fase) === "tabuada") Storage.desbloquearBossRush();
     }
 
     // moedas: acertos + bônus de vitória (pet 🐱 Mimi: +% em cima); conquistas
