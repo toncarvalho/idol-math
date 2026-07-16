@@ -237,6 +237,31 @@ app pago.
   `15-6`); os já salvos (`AxB`) continuam válidos como estão.
 - Decidir na retomada: o Desafio do Dia mistura mundos ou só os desbloqueados.
 
+### Inspiração Kumon (decisão de jul/2026)
+
+Pesquisamos a metodologia Kumon (pequenos passos, maestria antes de avançar,
+ponto de partida individualizado, rotina diária curta, autoinstrução) para
+avaliar incorporá-la. Conclusão: **o jogo já pratica a maior parte** — repetição
+inteligente ponderada pelos erros, Desafio do Dia com ofensiva, autonomia total —
+e num ponto é melhor que o método: a grade de pontos no erro ensina o *conceito*
+(crítica clássica ao Kumon é mecanizar sem compreender). Incorporar como
+**tempero, não reforma**:
+
+- [ ] **Teste de nivelamento** ao criar o perfil (10–12 contas rápidas
+      misturadas) → recomenda o mundo/fase inicial ("Comece pelo Mundo da
+      Soma!"). É o pilar Kumon que falta e vira argumento de loja
+      ("o jogo se adapta ao nível do seu filho"). Implementar junto com os
+      Mundos.
+- [ ] **Fases da Soma & Subtração desenhadas em degraus mínimos** (small
+      steps): cada fase adiciona UMA dificuldade nova, nunca duas.
+- [ ] **Métrica de fluência no painel dos pais**: além do mapa de calor de
+      erros, mostrar fatos que a criança acerta porém devagar (maestria =
+      acerto + velocidade, como no Kumon).
+
+O que fica **fora**: bloquear avanço até "maestria" comprovada (frustração em
+jogo) e usar o nome "Kumon" em qualquer material — marca registrada; dizer
+"inspirado em métodos de maestria e pequenos passos".
+
 ### Impacto no modelo premium
 
 O corte demo/pago fica mais forte com mundos:
