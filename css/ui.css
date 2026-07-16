@@ -523,6 +523,7 @@ button.pet-row:focus-visible {
   margin-left: -18px;
   margin-top: 30px;
   z-index: 1;
+  pointer-events: none; /* não rouba o toque da borda do botão do avatar */
 }
 .menu-pet img {
   width: 100%;

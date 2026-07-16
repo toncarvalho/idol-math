@@ -61,6 +61,7 @@ class GameScene extends Phaser.Scene {
     this.pet = typeof petEquipadoInfo === "function" ? petEquipadoInfo() : null;
     this.petUsado = false;
     this.petDanoBoss = false;
+    this.dicaApagadas = null; // alternativas apagadas pela dica do 🦜 (pergunta atual)
     // 🦁 vida extra: não infla as estrelas — vitoria() desconta vidaBonus
     this.vidaBonus = this.temPoder("vidaExtra") ? this.pet.poder.valor : 0;
     this.vidas += this.vidaBonus;
@@ -544,6 +545,7 @@ class GameScene extends Phaser.Scene {
   // ---------- Perguntas ----------
   novaPergunta() {
     if (this.acabou) return;
+    this.dicaApagadas = null;
     this.txtDica.setVisible(false);
     if (this.flashcard) {
       this.flashcard.destroy();
@@ -569,8 +571,10 @@ class GameScene extends Phaser.Scene {
       const peso = (Storage.getFatos() || {})[MathEngine.chaveFato(this.q.a, this.q.b)] || 0;
       if (peso >= 4 || this.isBoss) {
         this.petUsado = true;
-        const erradas = this.opcoes.filter((v) => v !== this.q.resposta).slice(0, 2);
-        GameUI.apagarOpcoes(erradas);
+        // guarda as apagadas: o chefão "embaralha" re-renderiza os botões e
+        // desfaria a dica (embaralharOpcoes reaplica)
+        this.dicaApagadas = this.opcoes.filter((v) => v !== this.q.resposta).slice(0, 2);
+        GameUI.apagarOpcoes(this.dicaApagadas);
         this.petAtiva("🦜 Bis cantou a dica!", "#8ff09a");
       }
     }
@@ -597,6 +601,8 @@ class GameScene extends Phaser.Scene {
     if (this.acabou || this.respondendo || this.pausado) return;
     this.opcoes = MathEngine.embaralhar(this.opcoes);
     GameUI.setRespostas(this.opcoes, (valor) => this.responder(valor));
+    // setRespostas reseta os botões — reaplica a dica do 🦜 já consumida
+    if (this.dicaApagadas) GameUI.apagarOpcoes(this.dicaApagadas);
     GameUI.anunciar("O chefão embaralhou as respostas!");
     this.flutuarTexto("🌀 Embaralhou!", "#2ff7e6");
     AudioFX.golpe();

@@ -252,7 +252,8 @@ const UIScreens = (() => {
   }
   /** Estado do card (classe, rótulo, "faltam N") comum a roupas e efeitos. */
   function infoCard(equipado, possui, preco, moedas, reqOk, cor) {
-    if (equipado) return { cls: "equipada", estado: "✓ Equipada", falta: "", cor };
+    // "Em uso" é neutro — serve para roupa (a Neon) e efeito (o Raio)
+    if (equipado) return { cls: "equipada", estado: "✓ Em uso", falta: "", cor };
     if (possui) return { cls: "possui", estado: "Equipar", falta: "", cor };
     if (!reqOk) return { cls: "bloq", estado: `🔒 🪙 ${preco}`, falta: "", cor };
     const falta = moedas < preco

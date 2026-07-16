@@ -184,10 +184,13 @@
   <!-- Service Worker (PWA offline) + atualização sob demanda -->
   <script>
     if ("serviceWorker" in navigator) {
-      // quando o SW novo assume o controle (após o toque no banner), recarrega 1x
+      // quando o SW novo assume o controle (após o toque no banner), recarrega 1x.
+      // Na PRIMEIRA visita não havia controller — o claim() do install inicial
+      // também dispara controllerchange e recarregaria a página do nada.
+      const haviaController = !!navigator.serviceWorker.controller;
       let recarregou = false;
       navigator.serviceWorker.addEventListener("controllerchange", () => {
-        if (recarregou) return;
+        if (recarregou || !haviaController) return;
         recarregou = true;
         window.location.reload();
       });
