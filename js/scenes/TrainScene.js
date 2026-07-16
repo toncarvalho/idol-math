@@ -110,8 +110,8 @@ class TrainScene extends Phaser.Scene {
     this.q = MathEngine.gerarPergunta(this.tab, JOGO.faixaFator, Storage.getFatos());
     this.opcoes = MathEngine.gerarOpcoes(this.q.resposta, this.q.a, this.q.b);
     this.txtPergunta.setText(`${this.q.texto} = ?`);
-    GameUI.anunciar(`Quanto é ${this.q.a} vezes ${this.q.b}?`);
-    Util.falar(`${this.q.a} vezes ${this.q.b}`);
+    GameUI.anunciar(`Quanto é ${this.q.falado}?`);
+    Util.falar(this.q.falado);
     GameUI.setRespostas(this.opcoes, (valor) => this.responder(valor));
     this.respondendo = false;
   }
@@ -120,7 +120,7 @@ class TrainScene extends Phaser.Scene {
     if (this.respondendo) return;
     this.respondendo = true;
     const certo = valor === this.q.resposta;
-    Storage.registrarResposta(this.q.a, this.q.b, certo);
+    Storage.registrarResposta(this.q.fatoA, this.q.fatoB, certo);
     if (certo) {
       this.acertos += 1;
       Storage.addMoedas(JOGO.moedas.treinoAcerto);

@@ -83,6 +83,37 @@ ok(frac > 0.25, `7x8 ponderado deve aparecer mais (${(frac * 100).toFixed(1)}%)`
 // chaveFato canônica (ordem não importa)
 ok(MathEngine.chaveFato(7, 8) === MathEngine.chaveFato(8, 7), "chaveFato deve ser canônica");
 
+// gerarPergunta expõe o fato canônico e o texto falado
+for (let i = 0; i < 500; i++) {
+  const q = MathEngine.gerarPergunta([7], faixa);
+  ok(q.fatoA * q.fatoB === q.resposta, "fatoA×fatoB deve ser a resposta");
+  ok(q.fatoA === 7, "fatoA é a tabuada-foco (canônico, sem inversão)");
+  ok(q.falado === `${q.a} vezes ${q.b}`, "falado da multiplicação por extenso");
+}
+
+// gerarPerguntaDivisao: (a×b) ÷ a, divisor = tabuada da fase, quociente na faixa
+for (let i = 0; i < 2000; i++) {
+  const q = MathEngine.gerarPerguntaDivisao([7], faixa);
+  ok(q.b === 7, "divisor deve ser a tabuada-foco");
+  ok(q.a === q.b * q.resposta, "dividendo = divisor × quociente (conta exata)");
+  ok(q.resposta >= faixa.min && q.resposta <= faixa.max, "quociente na faixa");
+  ok(q.texto === `${q.a} ÷ ${q.b}`, "texto usa ÷");
+  ok(q.falado === `${q.a} dividido por ${q.b}`, "falado da divisão por extenso");
+  ok(q.fatoA === 7 && q.fatoA * q.fatoB === q.a, "fato canônico é a multiplicação por trás");
+}
+
+// divisão compartilha os pesos da repetição inteligente com a tabuada:
+// o peso de "7x8" também puxa 56 ÷ 7
+{
+  let cont56 = 0;
+  for (let i = 0; i < N; i++) {
+    const q = MathEngine.gerarPerguntaDivisao([7], { min: 1, max: 10 }, fatos);
+    if (q.a === 56) cont56++;
+  }
+  const f56 = cont56 / N;
+  ok(f56 > 0.25, `56÷7 ponderado pelo peso de 7x8 deve aparecer mais (${(f56 * 100).toFixed(1)}%)`);
+}
+
 if (falhas) {
   console.error(`\n❌ ${falhas} verificação(ões) falharam.`);
   process.exit(1);

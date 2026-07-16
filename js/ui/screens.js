@@ -495,11 +495,18 @@ const UIScreens = (() => {
 
   // ===================== GRADE DE FASES (do mundo selecionado) =====================
   function rotuloFoco(fase) {
+    if (fase.foco) return fase.foco; // mundos novos declaram o rótulo na fase
     const t = fase.tabuadas;
-    if (!t) return fase.foco || ""; // mundos futuros declaram `foco` na fase
+    if (!t) return "";
     if (t.length >= 10) return "Mix";
     if (t.length === 1) return `Tab. ${t[0]}`;
     return `Tab. ${t[0]}–${t[t.length - 1]}`;
+  }
+  /** Arquivo do chefão para o tile: respeita arte reaproveitada (imgBoss
+   *  "boss7" → boss-7.svg; sem imgBoss, usa o id da própria fase). */
+  function arquivoBossTile(fase) {
+    const chave = fase.imgBoss || `boss${fase.id}`;
+    return chave.replace(/^boss/, "boss-");
   }
   function montarGrade() {
     const mundo = getMundo(mundoSel) || getMundo("tabuada");
@@ -520,7 +527,7 @@ const UIScreens = (() => {
       return `
         <button class="fase-tile" type="button" data-fase="${f.id}" style="--cor:${corHex(f.corTema)}">
           <span class="ft-num">${num}</span>
-          <span class="ft-emo"><img src="assets/inimigos/boss-${f.id}.svg" alt=""
+          <span class="ft-emo"><img src="assets/inimigos/${arquivoBossTile(f)}.svg" alt=""
             onerror="this.parentNode.textContent='${f.boss.emoji}'"></span>
           <span class="ft-foco">${rotuloFoco(f)}</span>
           <span class="ft-estrelas ${e ? "on" : ""}">${estr}</span>

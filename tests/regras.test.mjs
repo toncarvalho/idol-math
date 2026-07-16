@@ -120,8 +120,29 @@ ok(ft.every((f, i) => f.id === i + 1), "ids da Tabuada são 1–12 em ordem (sav
 ok(ft.every((f) => indiceFase(f.id) === f.id), "na Tabuada, índice === id (save legado)");
 // navegação entre fases (dentro do mundo)
 ok(proximaFase(1).id === 2, "próxima da fase 1 é a 2");
-ok(proximaFase(12) === null, "última fase do mundo não tem próxima");
+ok(proximaFase(12) === null, "última fase da Tabuada não tem próxima (não vaza p/ Divisão)");
 ok(getFase("3").id === 3, "getFase aceita id como string (dataset HTML)");
+
+// MUNDO DA DIVISÃO: 12 fases espelhando a Tabuada (Turnê Reversa)
+const divisao = MUNDOS.find((m) => m.id === "divisao");
+ok(!!divisao && !divisao.emBreve, "mundo Divisão existe e está jogável");
+const fd = fasesDoMundo("divisao");
+ok(fd.length === 12, "Divisão tem 12 fases");
+ok(fd.every((f, i) => f.id === `d${i + 1}`), "ids da Divisão são d1–d12 em ordem");
+ok(fd.every((f, i) => indiceFase(f.id) === i + 1), "índice das fases da Divisão");
+fd.forEach((f, i) => {
+  const orig = ft[i];
+  ok(f.imgInimigo === `inimigo${orig.id}` && f.imgBoss === `boss${orig.id}`,
+    `d${i + 1} reaproveita a arte da fase ${orig.id}`);
+  ok(JSON.stringify(f.tabuadas) === JSON.stringify(orig.tabuadas),
+    `d${i + 1} espelha as tabuadas da fase ${orig.id}`);
+  ok(f.boss.mecanica === orig.boss.mecanica,
+    `d${i + 1} espelha a mecânica do chefão da fase ${orig.id}`);
+  ok(!!f.foco, `d${i + 1} declara o rótulo foco do tile`);
+});
+ok(proximaFase("d1").id === "d2", "próxima da d1 é a d2");
+ok(proximaFase("d12") === null, "última fase da Divisão não tem próxima");
+ok(getFase("d3").nome === fd[2].nome, "getFase encontra fase por id string");
 
 if (falhas) {
   console.error(`\n❌ Regras: ${falhas} verificação(ões) falharam.`);

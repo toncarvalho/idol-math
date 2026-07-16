@@ -1,6 +1,10 @@
 /**
- * MathEngine — geração pura de perguntas de tabuada e alternativas.
- * Sem dependência do Phaser, fácil de testar isoladamente.
+ * MathEngine — geração pura de perguntas (multiplicação e divisão) e
+ * alternativas. Sem dependência do Phaser, fácil de testar isoladamente.
+ *
+ * Multiplicação e divisão COMPARTILHAM a mesma tabela de fatos e os mesmos
+ * pesos de repetição inteligente: errar 56 ÷ 7 e errar 7 × 8 é o mesmo buraco
+ * de conhecimento (chaveFato canônica "7x8" para ambos).
  */
 const MathEngine = (() => {
   function inteiroAleatorio(min, max) {
@@ -16,15 +20,11 @@ const MathEngine = (() => {
   }
 
   /**
-   * Gera uma pergunta de multiplicação.
-   * @param {number[]} tabuadas  fatores "tema" da fase (ex.: [2,5,7])
-   * @param {{min:number,max:number}} faixa  faixa do segundo fator
-   * @param {Object} [fatos]  repetição inteligente: { "min x max": peso } — fatos
-   *   com peso maior (mais errados) aparecem com mais frequência.
-   * @returns {{a:number,b:number,resposta:number,texto:string}}
+   * Sorteia um fato (tabuada × fator) — ponderado pelos pesos de repetição
+   * inteligente quando informados (fatos fracos aparecem mais). Compartilhado
+   * pela multiplicação e pela divisão.
    */
-  function gerarPergunta(tabuadas, faixa, fatos) {
-    let a, b;
+  function sortearFato(tabuadas, faixa, fatos) {
     if (fatos && Object.keys(fatos).length) {
       // seleção ponderada: enumera combinações e favorece fatos fracos
       const combos = [];
@@ -37,25 +37,68 @@ const MathEngine = (() => {
         }
       }
       let r = Math.random() * total;
-      let pick = combos[0];
       for (const c of combos) {
         r -= c.peso;
-        if (r <= 0) {
-          pick = c;
-          break;
-        }
+        if (r <= 0) return c;
       }
-      a = pick.a;
-      b = pick.b;
-    } else {
-      a = escolher(tabuadas);
-      b = inteiroAleatorio(faixa.min, faixa.max);
+      return combos[0];
     }
+    return { a: escolher(tabuadas), b: inteiroAleatorio(faixa.min, faixa.max) };
+  }
+
+  /**
+   * Gera uma pergunta de multiplicação.
+   * @param {number[]} tabuadas  fatores "tema" da fase (ex.: [2,5,7])
+   * @param {{min:number,max:number}} faixa  faixa do segundo fator
+   * @param {Object} [fatos]  repetição inteligente: { "min x max": peso } — fatos
+   *   com peso maior (mais errados) aparecem com mais frequência.
+   * @returns {{a:number,b:number,resposta:number,texto:string,falado:string,
+   *   fatoA:number,fatoB:number}}  a/b são os fatores COMO EXIBIDOS (ordem
+   *   sorteada); fatoA/fatoB são os fatores canônicos do fato treinado (para
+   *   registrar peso e desenhar a grade de pontos); falado é o texto por
+   *   extenso para voz/leitor de tela.
+   */
+  function gerarPergunta(tabuadas, faixa, fatos) {
+    const fato = sortearFato(tabuadas, faixa, fatos);
+    const a = fato.a;
+    const b = fato.b;
     // alterna a ordem para a jogadora não decorar posição
     const inverter = Math.random() < 0.5;
     const x = inverter ? b : a;
     const y = inverter ? a : b;
-    return { a: x, b: y, resposta: a * b, texto: `${x} × ${y}` };
+    return {
+      a: x,
+      b: y,
+      resposta: a * b,
+      texto: `${x} × ${y}`,
+      falado: `${x} vezes ${y}`,
+      fatoA: a,
+      fatoB: b,
+    };
+  }
+
+  /**
+   * Gera uma pergunta de DIVISÃO — a tabuada ao contrário: sorteia o mesmo
+   * fato da multiplicação e pergunta `(a×b) ÷ a`. O divisor vem de `tabuadas`
+   * (a tabuada treinada pela fase); a resposta é o outro fator (1..faixa.max),
+   * então os erros clássicos são os quocientes vizinhos (±1, ±2) — os deltas
+   * de gerarOpcoes SEM passar a/b (os produtos vizinhos teriam escala errada).
+   * fatoA/fatoB apontam o fato de multiplicação por trás (peso compartilhado).
+   */
+  function gerarPerguntaDivisao(tabuadas, faixa, fatos) {
+    const fato = sortearFato(tabuadas, faixa, fatos);
+    const divisor = fato.a;
+    const quociente = fato.b;
+    const produto = divisor * quociente;
+    return {
+      a: produto,
+      b: divisor,
+      resposta: quociente,
+      texto: `${produto} ÷ ${divisor}`,
+      falado: `${produto} dividido por ${divisor}`,
+      fatoA: fato.a,
+      fatoB: fato.b,
+    };
   }
 
   /**
@@ -123,5 +166,5 @@ const MathEngine = (() => {
     return a;
   }
 
-  return { gerarPergunta, gerarOpcoes, embaralhar, inteiroAleatorio, chaveFato };
+  return { gerarPergunta, gerarPerguntaDivisao, gerarOpcoes, embaralhar, inteiroAleatorio, chaveFato };
 })();

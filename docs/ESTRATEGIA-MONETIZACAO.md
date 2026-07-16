@@ -124,7 +124,8 @@ A grande vantagem: **o jogo não coleta dado nenhum** — tudo é `localStorage`
 - [x] Mecânica especial por chefão + power-ups de combo (ver §11).
 - [x] Estrutura de Mundos no ar: seleção de habilidade antes da grade,
       Tabuada dentro, prévias "Em breve" de Soma e Divisão (ver §12).
-- [ ] Mundo da Divisão (§12 — próximo passo; valida a estrutura).
+- [x] Mundo da Divisão no ar: "Turnê Reversa", 12 fases espelhando a Tabuada
+      com pesos de repetição compartilhados (§12).
 - [ ] Mundo Soma & Subtração (§12 — vira a demo web; pode ir para a Fase 2
       se atrasar o lançamento Android).
 - [ ] Implementar flag `DEMO` e gating de conteúdo na web (com mundos: demo =
@@ -210,9 +211,9 @@ que se sustentem ao lado dos concorrentes pagos da categoria.
 
 | # | Mundo | Conteúdo | Estado |
 |---|-------|----------|--------|
-| 1 | 🌟 **Soma & Subtração** | Contas de +/− por faixa numérica (1º–2º ano) | a construir (o maior) |
+| 1 | 🌟 **Soma & Subtração** | Contas de +/− por faixa numérica (1º–2º ano) | 🎯 PRÓXIMO PASSO (o maior) |
 | 2 | 🎤 **Tabuada** | O jogo atual, fases 1–12 intactas | ✅ no ar, dentro da estrutura de mundos |
-| 3 | ⚡ **Divisão** | Tabuada ao contrário: 56 ÷ 7 (4º ano) | 🎯 PRÓXIMO PASSO (barato) |
+| 3 | ⚡ **Divisão** | Tabuada ao contrário: 56 ÷ 7 (4º ano) | ✅ no ar (16/07/2026): "Turnê Reversa", 12 fases d1–d12 espelhando a Tabuada (mesma arte e mecânicas de chefão), pesos de repetição compartilhados com a tabuada |
 
 A ordem 1→2→3 é a progressão pedagógica da criança — Soma & Subtração vem
 ANTES da tabuada na escola. Efeito comercial: amplia a faixa etária de ~8–10
@@ -236,8 +237,12 @@ app pago.
   Tabuada, pausa→Fases abre a grade do mundo da fase. Falta o tema visual/cor
   de fundo por mundo no gameplay (o `gerarFundo` da BootScene já aceita cores).
 - **Sequência de construção**: (a) ✅ estrutura de mundos com a Tabuada
-  dentro; (b) 🎯 Divisão, validando a estrutura com conteúdo barato; (c) Soma
-  & Subtração por último.
+  dentro; (b) ✅ Divisão (validou a estrutura; `gerarPerguntaDivisao` no
+  MathEngine, distratores = quocientes vizinhos, flashcard mostra a grade da
+  multiplicação por trás); (c) 🎯 Soma & Subtração por último.
+- **Divisão sem arte própria por decisão**: é a "Turnê Reversa" — os mesmos
+  chefões voltam com as contas ao contrário (`imgInimigo`/`imgBoss` reusam as
+  texturas da Tabuada). Se um dia quisermos arte própria, o gancho já existe.
 
 ### Regras de segurança do save (INVIOLÁVEIS)
 

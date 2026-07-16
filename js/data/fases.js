@@ -100,7 +100,6 @@ const MUNDOS = [
     emoji: "⚡",
     descricao: "A tabuada ao contrário (4º ano)",
     cor: 0x3ea5ff,
-    emBreve: true,
   },
 ];
 
@@ -223,6 +222,51 @@ const FASES = [
 
 /** Ids de fase podem ser number (Tabuada, 1–12) ou string ("s1", "d1"...) —
  *  a comparação é sempre por String para o dataset HTML funcionar igual. */
+/**
+ * MUNDO DA DIVISÃO — a "Turnê Reversa": os mesmos chefões da Tabuada voltam,
+ * agora com as contas ao contrário (56 ÷ 7). Cada fase dN espelha a fase N:
+ * mesma tabuada (como divisor), mesma mecânica de chefão e a MESMA arte
+ * (imgInimigo/imgBoss reaproveitam as texturas inimigoN/bossN — nenhum SVG
+ * novo). `foco` é o rótulo do tile na grade (a Tabuada deriva de `tabuadas`).
+ */
+const NOMES_DIVISAO = [
+  { nome: "Palco Espelhado", desc: "A turnê reversa começa: divida por 1 e 2!", frase: "Agora é tudo ao contrário!" },
+  { nome: "Trovão Reverso", desc: "Revisão ao contrário: divida por 1, 2 e 3.", frase: "Três raios, divididos!" },
+  { nome: "Batida Partida", desc: "A tabuada do 3 ao contrário: 21 ÷ 3!", frase: "Reparta o ritmo comigo!" },
+  { nome: "Caos ao Contrário", desc: "A tabuada do 4 ao contrário: 32 ÷ 4!", frase: "Quatro batidas... divididas!" },
+  { nome: "Diva Invertida", desc: "A tabuada do 5 ao contrário: 45 ÷ 5!", frase: "Divida o palco comigo!" },
+  { nome: "Sombras Repartidas", desc: "A tabuada do 6 ao contrário: 54 ÷ 6!", frase: "Divido as sombras... e você?" },
+  { nome: "Trovões Partidos", desc: "A tabuada do 7 ao contrário: 63 ÷ 7!", frase: "O sete ribomba ao contrário!" },
+  { nome: "Teia Dividida", desc: "A tabuada do 8 ao contrário: 72 ÷ 8!", frase: "Minha teia se divide em oito!" },
+  { nome: "Vidas Repartidas", desc: "A tabuada do 9 ao contrário: 81 ÷ 9!", frase: "Reparto minhas vidas, nunca perco!" },
+  { nome: "Reino Dividido", desc: "A tabuada do 10 ao contrário: 90 ÷ 10!", frase: "Dividir e reinar!" },
+  { nome: "Caos Repartido", desc: "Misturão reverso! Divida por 1 a 10.", frase: "Tudo dividido ao mesmo tempo!" },
+  { nome: "Estádio Reverso", desc: "A grande final da turnê reversa!", frase: "Divida comigo o palco final!" },
+];
+// espelha as 12 fases da Tabuada (snapshot: FASES ainda só tem a Tabuada aqui)
+FASES.slice(0, NOMES_DIVISAO.length).forEach((f, i) => {
+  const d = NOMES_DIVISAO[i];
+  const t = f.tabuadas;
+  FASES.push({
+    id: `d${f.id}`,
+    mundo: "divisao",
+    nome: d.nome,
+    descricao: d.desc,
+    tabuadas: t,
+    foco: t.length >= 10 ? "Mix ÷" : t.length === 1 ? `÷ ${t[0]}` : `÷ ${t[0]}–${t[t.length - 1]}`,
+    corTema: f.corTema,
+    inimigoEmoji: f.inimigoEmoji,
+    imgInimigo: `inimigo${f.id}`,
+    imgBoss: `boss${f.id}`,
+    boss: {
+      nome: f.boss.nome,
+      emoji: f.boss.emoji,
+      frase: d.frase,
+      mecanica: f.boss.mecanica,
+    },
+  });
+});
+
 function getFase(id) {
   return FASES.find((f) => String(f.id) === String(id)) || FASES[0];
 }

@@ -181,6 +181,15 @@ function ok(cond, msg) {
   // save antigo (só faseDesbloqueada numérica) continua válido
   const raw = JSON.parse(ls.getItem(`idolmath.save.${S.perfilAtual().id}`));
   ok(raw.faseDesbloqueada === 5, "progresso da tabuada gravado no campo legado");
+  // mundo da Divisão: progresso próprio (ids string), sem tocar na tabuada
+  S.desbloquearFase("d2");
+  ok(S.faseMax("divisao") === 2, "desbloquearFase('d2') avança a Divisão");
+  ok(S.faseMax() === 5, "Divisão não mexe no progresso da tabuada");
+  S.setEstrelas("d1", 3);
+  ok(S.getEstrelas("d1") === 3, "estrelas por fase aceitam id string");
+  const raw2 = JSON.parse(ls.getItem(`idolmath.save.${S.perfilAtual().id}`));
+  ok(raw2.mundos && raw2.mundos.divisao === 2, "progresso da Divisão em mundos.divisao");
+  ok(raw2.faseDesbloqueada === 5, "campo legado intacto após progresso na Divisão");
 }
 
 // 9) Moedas

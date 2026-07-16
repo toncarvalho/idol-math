@@ -14,8 +14,10 @@ class GameScene extends Phaser.Scene {
     this.heroi = getHeroi((data && data.heroId) || Storage.getHeroiId());
 
     if (this.bossRush) {
+      // Boss Rush é dos 12 chefões da TABUADA (não inclui os mundos novos)
+      this.brFases = fasesDoMundo("tabuada");
       this.brIdx = 0;
-      this.fase = FASES[0];
+      this.fase = this.brFases[0];
       this.vidas = JOGO.vidasBossRush;
     } else if (this.diario) {
       // fase sintética: mix de todas as tabuadas, sem chefão
@@ -34,6 +36,9 @@ class GameScene extends Phaser.Scene {
       this.vidas = JOGO.vidas;
     }
     this.vidasIniciais = this.vidas;
+    // operação das perguntas vem do mundo da fase ("divisao" pergunta 56 ÷ 7);
+    // Desafio do Dia (fase sintética) e Boss Rush caem em "tabuada"
+    this.operacao = mundoDaFase(this.fase);
 
     this.pontuacao = 0;
     this.combo = 0;
@@ -270,9 +275,10 @@ class GameScene extends Phaser.Scene {
   }
 
   tituloFase() {
-    if (this.bossRush) return `Boss Rush — ${this.brIdx + 1}/${FASES.length}`;
+    if (this.bossRush) return `Boss Rush — ${this.brIdx + 1}/${this.brFases.length}`;
     if (this.diario) return "🗓️ Desafio do Dia";
-    return `Fase ${this.fase.id}: ${this.fase.nome}`;
+    // número da fase DENTRO do mundo (na Tabuada, igual ao id)
+    return `Fase ${indiceFase(this.fase.id)}: ${this.fase.nome}`;
   }
 
   /**
@@ -551,15 +557,19 @@ class GameScene extends Phaser.Scene {
       this.flashcard.destroy();
       this.flashcard = null;
     }
-    this.q = MathEngine.gerarPergunta(
-      this.fase.tabuadas,
-      JOGO.faixaFator,
-      Storage.getFatos()
-    );
-    this.opcoes = MathEngine.gerarOpcoes(this.q.resposta, this.q.a, this.q.b);
+    this.q =
+      this.operacao === "divisao"
+        ? MathEngine.gerarPerguntaDivisao(this.fase.tabuadas, JOGO.faixaFator, Storage.getFatos())
+        : MathEngine.gerarPergunta(this.fase.tabuadas, JOGO.faixaFator, Storage.getFatos());
+    // divisão NÃO passa a/b: os distratores certos são quocientes vizinhos
+    // (deltas ±1, ±2), não produtos da linha vizinha (escala errada)
+    this.opcoes =
+      this.operacao === "divisao"
+        ? MathEngine.gerarOpcoes(this.q.resposta)
+        : MathEngine.gerarOpcoes(this.q.resposta, this.q.a, this.q.b);
     this.txtPergunta.setText(`${this.q.texto} = ?`);
-    GameUI.anunciar(`Quanto é ${this.q.a} vezes ${this.q.b}?`);
-    Util.falar(`${this.q.a} vezes ${this.q.b}`);
+    GameUI.anunciar(`Quanto é ${this.q.falado}?`);
+    Util.falar(this.q.falado);
 
     // botões de resposta em HTML (camada GameUI) — toque nativo confiável
     GameUI.setRespostas(this.opcoes, (valor) => this.responder(valor));
@@ -568,7 +578,7 @@ class GameScene extends Phaser.Scene {
     // pet 🦜 Bis: na 1ª pergunta difícil (fato com peso alto) — ou no chefão,
     // se nenhuma apareceu — canta a dica: apaga 2 alternativas erradas
     if (this.temPoder("dica5050") && !this.petUsado) {
-      const peso = (Storage.getFatos() || {})[MathEngine.chaveFato(this.q.a, this.q.b)] || 0;
+      const peso = (Storage.getFatos() || {})[MathEngine.chaveFato(this.q.fatoA, this.q.fatoB)] || 0;
       if (peso >= 4 || this.isBoss) {
         this.petUsado = true;
         // guarda as apagadas: o chefão "embaralha" re-renderiza os botões e
@@ -685,7 +695,9 @@ class GameScene extends Phaser.Scene {
     this.cancelarEmbaralho();
     this.pararTimer();
     const certo = valor === this.q.resposta;
-    Storage.registrarResposta(this.q.a, this.q.b, certo);
+    // peso registrado no fato CANÔNICO (7x8): a divisão compartilha os pesos
+    // com a tabuada — errar 56÷7 e errar 7×8 é o mesmo buraco de conhecimento
+    Storage.registrarResposta(this.q.fatoA, this.q.fatoB, certo);
     if (certo) this.acertar();
     else this.errar(valor);
   }
@@ -804,7 +816,8 @@ class GameScene extends Phaser.Scene {
         (protegido ? " Seu escudo te protegeu!" : "")
     );
     this.txtDica.setText(`${this.q.texto} = ${this.q.resposta}`).setVisible(true);
-    this.flashcard = Util.flashcardMultiplicacao(this, this.q.a, this.q.b, 0x36d96b);
+    // a grade de pontos mostra o fato por trás (56÷7 → grade 7×8: o conceito)
+    this.flashcard = Util.flashcardMultiplicacao(this, this.q.fatoA, this.q.fatoB, 0x36d96b);
     this.flutuarTexto(protegido ? "🛡️ Escudo protegeu!" : "-1 ❤️", protegido ? "#9ad8ff" : "#ff5050");
     this.atualizarHUD();
 
@@ -826,9 +839,9 @@ class GameScene extends Phaser.Scene {
 
   // chefão derrotado: Boss Rush avança; normal → vitória
   chefaoDerrotado() {
-    if (this.bossRush && this.brIdx < FASES.length - 1) {
+    if (this.bossRush && this.brIdx < this.brFases.length - 1) {
       this.brIdx += 1;
-      this.fase = FASES[this.brIdx];
+      this.fase = this.brFases[this.brIdx];
       this.isBoss = false;
       this.iniciarChefao();
     } else {

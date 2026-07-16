@@ -36,15 +36,21 @@ class BootScene extends Phaser.Scene {
     }
     // Inimigos e chefões (SVG flat, mesmo estilo dos heróis).
     // Se um arquivo faltar, a cena usa o emoji da fase como fallback.
+    // Fases com imgInimigo/imgBoss REAPROVEITAM texturas de outra fase
+    // (ex.: Divisão espelha a Tabuada) — nada a carregar para elas.
     FASES.forEach((f) => {
-      this.load.svg(`inimigo${f.id}`, `assets/inimigos/inimigo-${f.id}.svg`, {
-        width: 256,
-        height: 256,
-      });
-      this.load.svg(`boss${f.id}`, `assets/inimigos/boss-${f.id}.svg`, {
-        width: 256,
-        height: 256,
-      });
+      if (!f.imgInimigo) {
+        this.load.svg(`inimigo${f.id}`, `assets/inimigos/inimigo-${f.id}.svg`, {
+          width: 256,
+          height: 256,
+        });
+      }
+      if (!f.imgBoss) {
+        this.load.svg(`boss${f.id}`, `assets/inimigos/boss-${f.id}.svg`, {
+          width: 256,
+          height: 256,
+        });
+      }
     });
   }
 
