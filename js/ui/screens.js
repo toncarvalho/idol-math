@@ -127,23 +127,56 @@ const UIScreens = (() => {
       .catch(() => toast("Não foi possível ler o arquivo 😕"));
   }
 
-  // ===================== CONQUISTAS =====================
+  // ===================== PETS (conquistas → companheiros com poderes) =====================
   function montarConquistas() {
     const desbloq = Storage.conquistasDesbloqueadas();
     const feitas = CONQUISTAS.filter((c) => desbloq[c.id]).length;
     const cont = document.getElementById("conq-contagem");
-    if (cont) cont.textContent = `🏅 ${feitas}/${CONQUISTAS.length}`;
+    if (cont) cont.textContent = `🐾 ${feitas}/${CONQUISTAS.length} adotados · toque para equipar`;
     const lista = document.getElementById("conq-lista");
     if (!lista) return;
+    const equipado = Storage.petEquipado();
     lista.innerHTML = CONQUISTAS.map((c) => {
+      const pet = typeof petDaConquista === "function" ? petDaConquista(c.id) : null;
       const feito = !!desbloq[c.id];
+      if (!pet) {
+        // conquista sem pet (futuras): linha de medalha simples
+        return `
+          <div class="conq-row ${feito ? "done" : "locked"}">
+            <span class="conq-ico">${feito ? c.icone : "🔒"}</span>
+            <span class="conq-txt"><b>${esc(c.nome)}</b><small>${esc(c.desc)}</small></span>
+            <span class="conq-pre">🪙 ${c.recompensa}</span>
+          </div>`;
+      }
+      const img = `<img class="pet-av ${feito ? "" : "silhueta"}" src="assets/pets/pet-${pet.id}.svg"
+        alt="${feito ? esc(pet.nome) : "Pet misterioso"}" loading="lazy"
+        onerror="this.outerHTML='<span class=&quot;conq-ico&quot;>${pet.emoji}</span>'">`;
+      if (!feito) {
+        // bloqueado: silhueta-surpresa + poder + como desbloquear (a conquista)
+        return `
+          <div class="conq-row pet-row locked">
+            ${img}
+            <span class="conq-txt"><b>Quem será? 🔒</b><small>${esc(pet.poderDesc)}</small>
+              <small class="pet-como">Para adotar: ${esc(c.desc)} ${c.icone} · 🪙 ${c.recompensa}</small></span>
+          </div>`;
+      }
+      const eq = pet.id === equipado;
       return `
-        <div class="conq-row ${feito ? "done" : "locked"}">
-          <span class="conq-ico">${feito ? c.icone : "🔒"}</span>
-          <span class="conq-txt"><b>${esc(c.nome)}</b><small>${esc(c.desc)}</small></span>
-          <span class="conq-pre">🪙 ${c.recompensa}</span>
-        </div>`;
+        <button class="conq-row pet-row done ${eq ? "eq" : ""}" type="button" data-pet="${pet.id}">
+          ${img}
+          <span class="conq-txt"><b>${esc(pet.nome)} · ${esc(pet.especie)}</b><small>${esc(pet.poderDesc)}</small>
+            <small class="pet-como">${c.icone} ${esc(c.nome)}</small></span>
+          <span class="pet-estado">${eq ? "✓ Junto!" : "Equipar"}</span>
+        </button>`;
     }).join("");
+  }
+  /** Toque num pet desbloqueado: equipa (ou desequipa, se já estava junto). */
+  function escolherPet(petId) {
+    if (!Storage.petDesbloqueado(petId)) return;
+    const vaiEquipar = Storage.petEquipado() !== petId;
+    Storage.equiparPet(vaiEquipar ? petId : null);
+    if (vaiEquipar) AudioFX.acerto();
+    montarConquistas();
   }
 
   // ===================== PROGRESSO =====================
@@ -398,6 +431,7 @@ const UIScreens = (() => {
     const ofensiva = Storage.ofensivaAtual();
     const feito = Storage.desafioFeitoHoje();
     const avatarFile = arquivoAvatar(Storage.roupaEquipada(heroId), heroId);
+    const petM = typeof petEquipadoInfo === "function" ? petEquipadoInfo() : null;
     const corpo = document.getElementById("menu-corpo");
     if (!corpo) return;
     corpo.innerHTML = `
@@ -405,6 +439,7 @@ const UIScreens = (() => {
         <button class="menu-avatar" type="button" data-acao="heroi" title="Trocar avatar">
           <img src="assets/herois/${avatarFile}.svg" alt="avatar">
         </button>
+        ${petM ? `<span class="menu-pet" title="${esc(petM.nome)}"><img src="assets/pets/pet-${petM.id}.svg" alt="${esc(petM.nome)}"></span>` : ""}
         <div class="menu-id">
           <span class="menu-nome">${meta ? esc(meta.nome) : ""}</span>
           <span class="menu-saldo">🪙 ${Storage.getMoedas()}${ofensiva > 0 ? `   🔥 ${ofensiva}` : ""}</span>
@@ -420,7 +455,7 @@ const UIScreens = (() => {
       </div>
       <div class="menu-grid3">
         <button class="ui-btn ${feito ? "mg-cinza" : "mg-laranja"}" type="button" data-acao="desafio">${feito ? "🗓️ Desafio ✓" : "🗓️ Desafio"}</button>
-        <button class="ui-btn mg-ouro" type="button" data-acao="conquistas">🏅 Conquistas</button>
+        <button class="ui-btn mg-ouro" type="button" data-acao="conquistas">🐾 Pets</button>
         <button class="ui-btn mg-rosa" type="button" data-acao="loja">🛍️ Loja</button>
       </div>
       <p class="menu-stats">🗺️ ${FASES.length} fases  ·  ⭐ ${Storage.totalEstrelas()}/${FASES.length * 3}  ·  🏆 ${Storage.get().melhorPontuacao}</p>`;
@@ -614,6 +649,16 @@ const UIScreens = (() => {
   }
 
   // ===================== RESULTADO =====================
+  /** Linha "você adotou um pet!" quando uma conquista nova traz pet junto. */
+  function htmlNovosPets(d) {
+    if (!d.novasConquistas || !d.novasConquistas.length) return "";
+    if (typeof petDaConquista !== "function") return "";
+    const pets = d.novasConquistas.map((c) => petDaConquista(c.id)).filter(Boolean);
+    if (!pets.length) return "";
+    return `<p class="res-pet">🐾 Você adotou ${pets
+      .map((p) => `${esc(p.nome)} ${p.emoji}`)
+      .join(" e ")}! Equipe na tela 🐾 Pets</p>`;
+  }
   function estrelasHtml(n) {
     let s = "";
     for (let i = 0; i < 3; i++) s += `<span class="res-star ${i < n ? "on" : ""}">★</span>`;
@@ -649,6 +694,7 @@ const UIScreens = (() => {
       </div>
       ${d.moedasGanhas ? `<p class="res-coins">🪙 +${d.moedasGanhas} moedas</p>` : ""}
       ${d.novasConquistas && d.novasConquistas.length ? `<p class="res-conq">🏅 Nova conquista!  ${d.novasConquistas.map((c) => esc(c.icone + " " + c.nome)).join("   ")}</p>` : ""}
+      ${htmlNovosPets(d)}
       <p class="res-fatos ${fatos.length ? "" : "ok"}">${fatosTxt}</p>
       ${venceu && d.temProxima
         ? '<button class="ui-btn res-prox" type="button" data-acao="result-proxima">▶  Próxima Fase</button>'
@@ -682,6 +728,7 @@ const UIScreens = (() => {
       ${d.moedasGanhas ? `<p class="res-coins">🪙 +${d.moedasGanhas} moedas</p>` : ""}
       <p class="res-aviso">${aviso}</p>
       ${d.novasConquistas && d.novasConquistas.length ? `<p class="res-conq">🏅 Nova conquista!  ${d.novasConquistas.map((c) => esc(c.icone + " " + c.nome)).join("   ")}</p>` : ""}
+      ${htmlNovosPets(d)}
       <button class="ui-btn res-replay" type="button" data-acao="result-diario-replay">↻  Jogar de novo</button>
       <button class="ui-btn ui-voltar" type="button" data-acao="menu">🏠  Menu</button>`;
   }
@@ -818,12 +865,13 @@ const UIScreens = (() => {
 
       r.addEventListener("click", (ev) => {
         const alvo = ev.target.closest(
-          "[data-cfg],[data-roupa],[data-efeito],[data-lojaheroi],[data-fase],[data-treino],[data-heroi],[data-perfil],[data-novoheroi],[data-acao]"
+          "[data-cfg],[data-roupa],[data-efeito],[data-lojaheroi],[data-pet],[data-fase],[data-treino],[data-heroi],[data-perfil],[data-novoheroi],[data-acao]"
         );
         if (!alvo || !r.contains(alvo)) return;
         AudioFX.unlock();
         if (alvo.dataset.cfg) return alternarAjuste(alvo.dataset.cfg);
         if (alvo.dataset.roupa) return escolherRoupa(alvo.dataset.roupa);
+        if (alvo.dataset.pet) return escolherPet(alvo.dataset.pet);
         if (alvo.dataset.efeito) return escolherEfeito(alvo.dataset.efeito);
         if (alvo.dataset.lojaheroi) {
           lojaHeroiSel = +alvo.dataset.lojaheroi;

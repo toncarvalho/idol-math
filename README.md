@@ -38,8 +38,10 @@ resposta certa para atacar, encadeie **combos**, não perca suas **vidas** ❤�
 - 💀 **Boss Rush**: enfrente os 12 chefões em sequência (desbloqueia ao zerar a última fase).
 - 🗓️ **Desafio do Dia + ofensiva**: um desafio rápido (mix de tabuadas) por dia; jogar dias
   seguidos acumula uma **ofensiva (🔥 streak)** e rende moedas-bônus crescentes.
-- 🏅 **Conquistas**: medalhas por marcos (combo x10, show perfeito, mestre do 7, imperatriz…),
-  cada uma rende **moedas**.
+- 🐾 **Pets companheiros**: cada conquista (combo x10, show perfeito, imperatriz…) rende
+  **moedas** e **adota um pet** com um poder automático que ajuda no palco — congelar o
+  tempo (🐢), segurar o combo (🐰), vida extra (🦁), reviver (🦄), dica 50/50 (🦜)…
+  Equipe 1 por vez na tela **🐾 Pets**; ele acompanha a heroína durante a partida.
 - 🪙 **Moedas & 🛍️ Loja**: ganhe moedas jogando e desbloqueie **roupas** para os personagens
   (cada roupa troca a figura; a equipada aparece no HUD e no menu) e **efeitos de ataque**
   (o projétil do golpe: raio, coração, estrela, nota). A loja tem abas de personagem,
@@ -92,10 +94,13 @@ js/data/herois.js     # 🦸 HEROIS (figura + cor + nome) — cosméticos
 js/data/roupas.js     # 🛍️ roupas da loja (por herói; Douradas têm `requisito`)
 js/data/efeitos.js    # ✨ efeitos de ataque da loja (projétil do golpe)
 js/data/conquistas.js # 🏅 conquistas (condição + recompensa)
+js/data/pets.js       # 🐾 pets companheiros (1 por conquista; poder automático)
 assets/herois/*.svg   # figuras dos personagens (DiceBear / Avataaars)
 assets/inimigos/*.svg # figuras dos inimigos e chefões (flat neon; fallback: emoji)
+assets/pets/*.svg     # figuras dos pets (flat neon; fallback: emoji)
 tools/gerar-inimigos.mjs # gerador das figuras dos inimigos (node tools/gerar-inimigos.mjs)
 tools/gerar-roupas.mjs   # gerador das roupas tiers 180/300 (node tools/gerar-roupas.mjs)
+tools/gerar-pets.mjs     # gerador das figuras dos pets (node tools/gerar-pets.mjs)
 js/core/MathEngine.js # geração de perguntas e alternativas (puro, testável)
 js/core/Regras.js     # fórmulas de pontos/estrelas/moedas (puro, testável)
 js/core/Audio.js      # música + efeitos sonoros (Web Audio)

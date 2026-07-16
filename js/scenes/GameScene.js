@@ -55,8 +55,18 @@ class GameScene extends Phaser.Scene {
     this.time.paused = false;
     this.tweens.resumeAll();
 
+    // pet companheiro (conquistas) e controle dos poderes:
+    // petUsado = poderes 1x por partida (congelaTempo/guardaCombo/dica5050/reviver);
+    // petDanoBoss rearma a cada chefão (iniciarChefao)
+    this.pet = typeof petEquipadoInfo === "function" ? petEquipadoInfo() : null;
+    this.petUsado = false;
+    this.petDanoBoss = false;
+    // 🦁 vida extra: não infla as estrelas — vitoria() desconta vidaBonus
+    this.vidaBonus = this.temPoder("vidaExtra") ? this.pet.poder.valor : 0;
+    this.vidas += this.vidaBonus;
+
     // power-ups de combo (🛡️ bloqueia a perda de 1 vida; ⚡ próximo acerto vale 2)
-    this.escudo = false;
+    this.escudo = this.temPoder("escudoInicial"); // 🐶 Rex começa com escudo
     this.raioX2 = false;
     // mecânica especial do chefão atual ({ id, icone, ... } — ver fases.js) e
     // progresso da guarda do chefão "blindado" (acertos seguidos acumulados)
@@ -69,6 +79,11 @@ class GameScene extends Phaser.Scene {
     this.erros = 0;
     this.errosFatos = []; // textos "7 × 8" errados nesta partida
     this.moedasPartida = 0; // moedas ganhas (acertos + bônus)
+  }
+
+  /** O pet equipado tem este poder? (pet = null ⇒ false) */
+  temPoder(tipo) {
+    return !!(this.pet && this.pet.poder.tipo === tipo);
   }
 
   create() {
@@ -195,6 +210,7 @@ class GameScene extends Phaser.Scene {
     });
 
     this.criarHeroi();
+    this.criarPet();
 
     this.txtInimigoNome = this.add
       .text(cx, 492, "", {
@@ -285,6 +301,49 @@ class GameScene extends Phaser.Scene {
       ease: "Sine.inOut",
       delay: 300,
     });
+  }
+
+  /** O pet companheiro no palco, aos pés da heroína (textura ou emoji). */
+  criarPet() {
+    if (!this.pet) return;
+    this.petCont = this.add.container(40, 552).setDepth(21);
+    if (this.textures.exists(this.pet.img)) {
+      this.petImg = this.add.image(0, 0, this.pet.img).setDisplaySize(76, 76);
+    } else {
+      this.petImg = this.add
+        .text(0, 0, this.pet.emoji, { fontSize: "52px" })
+        .setOrigin(0.5);
+    }
+    this.petCont.add(this.petImg);
+    this.tweens.add({
+      targets: this.petImg,
+      y: -8,
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.inOut",
+      delay: 500,
+    });
+  }
+
+  /** O pet comemora quando o poder dispara: aviso + pulinho + brilhos. */
+  petAtiva(msg, corTexto) {
+    if (msg) {
+      this.flutuarTexto(msg, corTexto || "#ffd23e");
+      GameUI.anunciar(msg);
+    }
+    if (!this.petCont) return;
+    this.particulas.emitParticleAt(this.petCont.x, this.petCont.y - 12, 8);
+    if (!Util.reduzirMovimento()) {
+      this.tweens.add({
+        targets: this.petCont,
+        y: this.petCont.y - 26,
+        duration: 140,
+        yoyo: true,
+        repeat: 1,
+        ease: "Quad.out",
+      });
+    }
   }
 
   /** Mostra a figura do inimigo/chefão (textura se existir; senão o emoji). */
@@ -415,6 +474,7 @@ class GameScene extends Phaser.Scene {
 
   iniciarChefao() {
     this.isBoss = true;
+    this.petDanoBoss = this.temPoder("danoChefao"); // 🐉 rearma a cada chefão
     const boss = this.fase.boss;
     this.mec = getMecanicaChefao(this.fase);
     this.guardaChefao = 0;
@@ -503,6 +563,18 @@ class GameScene extends Phaser.Scene {
     GameUI.setRespostas(this.opcoes, (valor) => this.responder(valor));
     this.iniciarTimer();
 
+    // pet 🦜 Bis: na 1ª pergunta difícil (fato com peso alto) — ou no chefão,
+    // se nenhuma apareceu — canta a dica: apaga 2 alternativas erradas
+    if (this.temPoder("dica5050") && !this.petUsado) {
+      const peso = (Storage.getFatos() || {})[MathEngine.chaveFato(this.q.a, this.q.b)] || 0;
+      if (peso >= 4 || this.isBoss) {
+        this.petUsado = true;
+        const erradas = this.opcoes.filter((v) => v !== this.q.resposta).slice(0, 2);
+        GameUI.apagarOpcoes(erradas);
+        this.petAtiva("🦜 Bis cantou a dica!", "#8ff09a");
+      }
+    }
+
     // chefão "embaralha": no meio da pergunta as respostas trocam de lugar
     this.cancelarEmbaralho();
     if (this.isBoss && this.mec && this.mec.id === "embaralha") {
@@ -555,6 +627,8 @@ class GameScene extends Phaser.Scene {
     if (segundos && this.isBoss && this.mec && this.mec.id === "tempoCurto") {
       segundos = JOGO.mecanicas.tempoCurtoSeg;
     }
+    // pet 🦉 Sofia: mais tempo para pensar (vale até contra o chefão apressado)
+    if (segundos && this.temPoder("tempoExtra")) segundos += this.pet.poder.valor;
     if (!segundos) {
       this.timerBarBg.setVisible(false);
       this.timerFill.setVisible(false);
@@ -576,6 +650,13 @@ class GameScene extends Phaser.Scene {
   update(time, delta) {
     if (this.pausado || !this.timerAtivo || this.acabou || this.respondendo) return;
     this.tempoRestante -= delta;
+    // pet 🐢 Tato: quando o tempo está acabando, congela o relógio (1x por partida)
+    if (this.tempoRestante <= 2000 && this.temPoder("congelaTempo") && !this.petUsado) {
+      this.petUsado = true;
+      this.pararTimer();
+      this.petAtiva("🐢 Tato congelou o tempo!", "#8fe89b");
+      return;
+    }
     const frac = Phaser.Math.Clamp(this.tempoRestante / this.tempoTotal, 0, 1);
     this.timerFill.scaleX = frac;
     const cor = frac > 0.3 ? 0x2ff7e6 : 0xff3030;
@@ -608,16 +689,24 @@ class GameScene extends Phaser.Scene {
     GameUI.feedback(this.q.resposta, null);
     this.acertos += 1;
     this.moedasPartida += JOGO.moedas.acerto;
+    // pet 🐝 Zum: moedas extras por acerto
+    if (this.temPoder("moedasAcerto")) this.moedasPartida += this.pet.poder.valor;
     this.combo += 1;
     this.maxCombo = Math.max(this.maxCombo, this.combo);
     const ganho = Regras.pontosAcerto(this.isBoss, this.combo);
     this.pontuacao += ganho;
 
     // ⚡ golpe duplo guardado: este acerto vale 2 (dano no chefão / inimigos)
-    const dano = this.raioX2 ? 2 : 1;
+    let dano = this.raioX2 ? 2 : 1;
     if (this.raioX2) {
       this.raioX2 = false;
       this.time.delayedCall(240, () => this.flutuarTexto("⚡ Golpe duplo!", "#ffd23e"));
+    }
+    // pet 🐉 Faísca: ataca junto no 1º acerto de cada chefão
+    if (this.isBoss && this.petDanoBoss) {
+      this.petDanoBoss = false;
+      dano += this.pet.poder.valor;
+      this.time.delayedCall(140, () => this.petAtiva("🐉 Faísca atacou junto!", "#7df5e5"));
     }
     // power-up ganho ao atingir o combo (Regras.powerupPorCombo)
     const pu = Regras.powerupPorCombo(this.combo, this.escudo, this.raioX2);
@@ -671,7 +760,13 @@ class GameScene extends Phaser.Scene {
     this.respondendo = true;
     this.erros += 1;
     this.errosFatos.push(this.q.texto);
-    this.combo = 0;
+    // pet 🐰 Pipoca: segura o combo uma vez por partida (o erro ainda conta)
+    if (this.combo > 0 && this.temPoder("guardaCombo") && !this.petUsado) {
+      this.petUsado = true;
+      this.time.delayedCall(240, () => this.petAtiva("🐰 Pipoca segurou o combo!", "#ffb3dd"));
+    } else {
+      this.combo = 0;
+    }
     // chefão "blindado": errar zera o progresso da guarda
     if (this.isBoss && this.mec && this.mec.id === "blindado" && this.guardaChefao) {
       this.guardaChefao = 0;
@@ -709,6 +804,15 @@ class GameScene extends Phaser.Scene {
 
     this.time.delayedCall(1500, () => {
       this.respondendo = false;
+      // pet 🦄 Luna: na última vida, revive uma vez em vez de perder
+      if (this.vidas <= 0 && this.temPoder("reviver") && !this.petUsado) {
+        this.petUsado = true;
+        this.vidas = 1;
+        this.petAtiva("🦄 Luna te reviveu! +1 ❤️", "#e8dcff");
+        this.atualizarHUD();
+        this.novaPergunta();
+        return;
+      }
       if (this.vidas <= 0) this.derrota();
       else this.novaPergunta();
     });
@@ -817,8 +921,15 @@ class GameScene extends Phaser.Scene {
     // ---- Desafio do Dia: registra ofensiva + bônus, sem estrelas/fases ----
     if (this.diario) {
       const res = Storage.registrarDesafioDiario();
-      const moedas = this.moedasPartida + res.recompensa;
-      Storage.addMoedas(this.moedasPartida); // res.recompensa já foi creditada no Storage
+      let moedas = this.moedasPartida + res.recompensa;
+      let aCreditar = this.moedasPartida; // res.recompensa já foi creditada no Storage
+      // pet 🐱 Mimi: bônus % sobre as moedas da vitória
+      if (this.temPoder("moedasVitoria")) {
+        const bonus = Math.ceil(moedas * this.pet.poder.valor);
+        moedas += bonus;
+        aCreditar += bonus;
+      }
+      Storage.addMoedas(aCreditar);
       Storage.registrarFimDePartida({
         maxCombo: this.maxCombo,
         semErro: this.erros === 0,
@@ -840,7 +951,8 @@ class GameScene extends Phaser.Scene {
       return;
     }
 
-    const estrelas = Regras.calcularEstrelas(this.vidas, this.bossRush);
+    // estrelas medem maestria: a vida extra do pet 🦁 não conta para elas
+    const estrelas = Regras.calcularEstrelas(this.vidas - this.vidaBonus, this.bossRush);
     let temProxima = false;
     if (this.bossRush) {
       Storage.desbloquearBossRush();
@@ -852,8 +964,11 @@ class GameScene extends Phaser.Scene {
       else Storage.desbloquearBossRush(); // zerou a última → libera Boss Rush
     }
 
-    // moedas: acertos + bônus de vitória; conquistas
-    const moedas = Regras.moedasVitoria(this.moedasPartida, estrelas);
+    // moedas: acertos + bônus de vitória (pet 🐱 Mimi: +% em cima); conquistas
+    let moedas = Regras.moedasVitoria(this.moedasPartida, estrelas);
+    if (this.temPoder("moedasVitoria")) {
+      moedas += Math.ceil(moedas * this.pet.poder.valor);
+    }
     Storage.addMoedas(moedas);
     Storage.registrarFimDePartida({
       maxCombo: this.maxCombo,

@@ -182,6 +182,47 @@
 .conq-row.locked .conq-pre {
   color: #777788;
 }
+/* pets (conquistas → companheiros) */
+button.pet-row {
+  width: 100%;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+button.pet-row:active {
+  transform: scale(0.98);
+}
+button.pet-row:focus-visible {
+  outline: 3px solid #ffd23e;
+  outline-offset: 2px;
+}
+.pet-row.eq {
+  border-color: #36d96b;
+  border-width: 3px;
+  background: rgba(54, 217, 107, 0.08);
+}
+.pet-av {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+}
+.pet-av.silhueta {
+  filter: grayscale(1) brightness(0.35);
+  opacity: 0.8;
+}
+.pet-como {
+  color: #9a9aae !important;
+}
+.pet-estado {
+  flex: 0 0 auto;
+  font-size: clamp(14px, 4vw, 19px);
+  font-weight: 800;
+  color: #2ff7e6;
+}
+.pet-row.eq .pet-estado {
+  color: #36d96b;
+}
 
 /* ---------------- PROGRESSO ---------------- */
 .prog-vazio {
@@ -473,6 +514,20 @@
 .menu-avatar img {
   width: 100%;
   height: 100%;
+}
+/* pet equipado espiando ao lado do avatar no menu */
+.menu-pet {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  margin-left: -18px;
+  margin-top: 30px;
+  z-index: 1;
+}
+.menu-pet img {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
 }
 .menu-id {
   flex: 1 1 auto;
@@ -791,6 +846,13 @@
   font-weight: 800;
   color: #36d96b;
 }
+.res-pet {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(16px, 4.4vw, 22px);
+  font-weight: 800;
+  color: #ffd23e;
+}
 .res-fatos {
   margin: 0;
   text-align: center;
@@ -893,7 +955,7 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35);
-  transition: transform 0.05s ease, filter 0.1s ease;
+  transition: transform 0.05s ease, filter 0.1s ease, opacity 0.2s ease;
 }
 .resp-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); }
 .resp-btn:focus-visible { outline: 4px solid #ffffff; outline-offset: 2px; }
@@ -904,6 +966,11 @@
 .resp-btn.ouro { background: #ffd23e; color: #0d0d12; }
 .resp-btn.certo { background: #36d96b !important; color: #0d0d12 !important; }
 .resp-btn.errado { background: #ff3030 !important; color: #fff !important; }
+/* alternativa apagada pela dica do pet 🦜 (5050) */
+.resp-btn.apagado {
+  opacity: 0.18;
+  filter: grayscale(1);
+}
 
 /* botão de pausa / menu (canto superior direito do canvas) */
 #jogo-pausa-btn {

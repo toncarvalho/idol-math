@@ -28,6 +28,12 @@ class BootScene extends Phaser.Scene {
         });
       });
     }
+    // Pets companheiros (SVG flat; fallback: emoji do pet).
+    if (typeof PETS !== "undefined") {
+      PETS.forEach((p) => {
+        this.load.svg(p.img, `assets/pets/pet-${p.id}.svg`, { width: 128, height: 128 });
+      });
+    }
     // Inimigos e chefões (SVG flat, mesmo estilo dos heróis).
     // Se um arquivo faltar, a cena usa o emoji da fase como fallback.
     FASES.forEach((f) => {

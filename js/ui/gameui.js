@@ -105,6 +105,20 @@ const GameUI = (() => {
       if (resp) resp.hidden = true;
     },
 
+    /**
+     * Apaga alternativas erradas (dica 5050 do pet 🦜): os botões com esses
+     * valores ficam desabilitados e "apagados", sem sair do lugar.
+     */
+    apagarOpcoes(valores) {
+      const alvo = valores.map((v) => `${v}`);
+      btns().forEach((b) => {
+        if (alvo.indexOf(b.dataset.val) !== -1) {
+          b.disabled = true;
+          b.classList.add("apagado");
+        }
+      });
+    },
+
     /** Anuncia texto para leitores de tela (a conta é desenhada no canvas). */
     anunciar(texto) {
       const p = el("jogo-anuncio");

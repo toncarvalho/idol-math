@@ -2,7 +2,7 @@
  * Service Worker — cache do app shell para o jogo funcionar 100% offline
  * e carregar rápido. Estratégia cache-first com fallback de rede.
  */
-const CACHE = "idolmath-v21";
+const CACHE = "idolmath-v22";
 const ASSETS = [
   "./",
   "index.html",
@@ -24,6 +24,7 @@ const ASSETS = [
   "js/data/roupas.js",
   "js/data/efeitos.js",
   "js/data/conquistas.js",
+  "js/data/pets.js",
   "js/scenes/BootScene.js",
   "js/scenes/GameScene.js",
   "js/scenes/TrainScene.js",
@@ -57,6 +58,16 @@ const ASSETS = [
   "assets/herois/priya-esporte.svg",
   "assets/herois/priya-show.svg",
   "assets/herois/priya-dourada.svg",
+  "assets/pets/pet-mimi.svg",
+  "assets/pets/pet-tato.svg",
+  "assets/pets/pet-pipoca.svg",
+  "assets/pets/pet-sofia.svg",
+  "assets/pets/pet-rex.svg",
+  "assets/pets/pet-bis.svg",
+  "assets/pets/pet-zum.svg",
+  "assets/pets/pet-faisca.svg",
+  "assets/pets/pet-majestade.svg",
+  "assets/pets/pet-luna.svg",
   "assets/inimigos/inimigo-1.svg",
   "assets/inimigos/boss-1.svg",
   "assets/inimigos/inimigo-2.svg",

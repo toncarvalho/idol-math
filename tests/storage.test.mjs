@@ -14,6 +14,7 @@ const code = readFileSync(join(__dirname, "../js/core/Storage.js"), "utf8");
 // globais usados pelo Storage: dados (roupas/conquistas/herois/JOGO) + MathEngine
 const codeRoupas = readFileSync(join(__dirname, "../js/data/roupas.js"), "utf8");
 const codeEfeitos = readFileSync(join(__dirname, "../js/data/efeitos.js"), "utf8");
+const codePets = readFileSync(join(__dirname, "../js/data/pets.js"), "utf8");
 const codeConq = readFileSync(join(__dirname, "../js/data/conquistas.js"), "utf8");
 const codeHerois = readFileSync(join(__dirname, "../js/data/herois.js"), "utf8");
 const codeFases = readFileSync(join(__dirname, "../js/data/fases.js"), "utf8");
@@ -32,8 +33,8 @@ function makeLS(initial = {}) {
 function loadStorage(ls) {
   // dados + MathEngine definem globais usados pelo Storage
   const bundle =
-    codeHerois + "\n" + codeRoupas + "\n" + codeEfeitos + "\n" + codeConq + "\n" +
-    codeFases + "\n" + codeMath + "\n" + code + "\nreturn Storage;";
+    codeHerois + "\n" + codeRoupas + "\n" + codeEfeitos + "\n" + codePets + "\n" +
+    codeConq + "\n" + codeFases + "\n" + codeMath + "\n" + code + "\nreturn Storage;";
   return new Function("localStorage", bundle)(ls);
 }
 
@@ -250,6 +251,51 @@ function ok(cond, msg) {
   ok(ra(gr("leo-dourada"), { maxCombo: 15 }) === true, "combo: cumpre");
   ok(ra(gr("priya-dourada"), { acertos: 300 }) === true, "acertos: cumpre");
   ok(ra(gr("priya-dourada"), { acertos: 299 }) === false, "acertos: não cumpre");
+}
+
+// 10e) Pets: desbloqueio via conquista, equipar/desequipar, persistência
+{
+  const ls = makeLS();
+  const S = loadStorage(ls);
+  S.criarPerfil("Ana", 1);
+  ok(S.petEquipado() === null, "sem pet equipado no início");
+  ok(S.petDesbloqueado("mimi") === false, "pet bloqueado sem a conquista");
+  ok(S.equiparPet("mimi") === false, "não equipa pet bloqueado");
+  ok(S.petEquipado() === null, "segue sem pet após tentativa inválida");
+  // desbloqueia a conquista "estreia" (vencer a 1ª fase) → adota a Mimi
+  S.desbloquearFase(2);
+  S.avaliarConquistas({ venceu: true });
+  ok(S.petDesbloqueado("mimi") === true, "conquista desbloqueia o pet");
+  ok(S.equiparPet("mimi") === true, "equipa pet desbloqueado");
+  ok(S.petEquipado() === "mimi", "pet equipado registrado");
+  // persiste entre instâncias
+  const S2 = loadStorage(ls);
+  ok(S2.petEquipado() === "mimi", "pet equipado persiste");
+  // desequipar (jogar sem pet) é válido
+  ok(S2.equiparPet(null) === true, "desequipar retorna true");
+  ok(S2.petEquipado() === null, "desequipado");
+  ok(S2.equiparPet("inexistente") === false, "pet inexistente não equipa");
+}
+
+// 10f) Dados dos PETS: 1 pet por conquista, poderes conhecidos
+{
+  const { PETS: P, CONQUISTAS: C } = new Function(
+    codePets + "\n" + codeConq + "\nreturn { PETS, CONQUISTAS };"
+  )();
+  const tipos = [
+    "moedasVitoria", "congelaTempo", "guardaCombo", "tempoExtra", "escudoInicial",
+    "dica5050", "moedasAcerto", "danoChefao", "vidaExtra", "reviver",
+  ];
+  ok(P.length === C.length, "há exatamente 1 pet por conquista");
+  const conquistaIds = new Set(C.map((c) => c.id));
+  const vistos = new Set();
+  P.forEach((p) => {
+    ok(conquistaIds.has(p.conquistaId), `pet ${p.id}: conquista "${p.conquistaId}" existe`);
+    ok(!vistos.has(p.conquistaId), `pet ${p.id}: conquista sem pet duplicado`);
+    vistos.add(p.conquistaId);
+    ok(tipos.includes(p.poder.tipo), `pet ${p.id}: poder "${p.poder.tipo}" conhecido`);
+    ok(!!p.nome && !!p.emoji && !!p.poderDesc, `pet ${p.id}: dados completos`);
+  });
 }
 
 // 11) Conquistas: avaliar desbloqueia + credita uma vez

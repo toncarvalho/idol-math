@@ -94,6 +94,14 @@ code:
   read by GameScene through the guarded `texturaEfeito()` helper.
 - `js/data/conquistas.js` — achievements as `{ id, cond(snapshot), recompensa }`; `cond` is
   evaluated against a stats snapshot built in `Storage.avaliarConquistas`.
+- `js/data/pets.js` — companion pets, exactly one per achievement (`conquistaId`): unlocking
+  the achievement adopts the pet; the profile equips at most one (`Storage.petEquipado` /
+  `equiparPet`; unlock state is derived from `state.conquistas`, no migration). Each pet has
+  a declarative `poder: { tipo, valor }` implemented as small hooks in GameScene (see the
+  tipo list in the file header); powers are automatic (no new in-game buttons), apply in
+  phases/daily/Boss Rush, and never answer for the child. The 🦁 extra life is excluded from
+  star calculation (`vidaBonus` in GameScene). Art: `tools/gerar-pets.mjs` → `assets/pets/`
+  (emoji fallback). The achievements screen doubles as the pets screen (equip by tapping).
 
 ### Core modules (js/core/)
 

@@ -32,6 +32,7 @@ const Storage = (() => {
     conquistas: {}, // { id: true } desbloqueadas
     // possui: [roupaId|efeitoId]; roupa: { heroId: roupaId }; efeito: id equipado (por perfil)
     cosmeticos: { possui: [], roupa: {}, efeito: null },
+    pet: null, // pet equipado (id de PETS; desbloqueio vem das conquistas)
     desafio: { ultimoDia: null, ofensiva: 0, melhorOfensiva: 0 }, // desafio diário
   });
 
@@ -460,6 +461,25 @@ const Storage = (() => {
       if (!state.cosmeticos) state.cosmeticos = { possui: [], roupa: {} };
       state.cosmeticos.efeito = efeitoId;
       salvarSave();
+    },
+
+    // ===================== PETS (companheiros das conquistas) =====================
+    /** Pet desbloqueado = a conquista dele foi desbloqueada neste perfil. */
+    petDesbloqueado(petId) {
+      const pet = typeof getPet === "function" ? getPet(petId) : null;
+      if (!pet) return false;
+      return !!(state.conquistas && state.conquistas[pet.conquistaId]);
+    },
+    /** Id do pet equipado (null = jogar sem pet). */
+    petEquipado() {
+      return state.pet || null;
+    },
+    /** Equipa (só se desbloqueado) ou desequipa (null). Retorna true se mudou. */
+    equiparPet(petId) {
+      if (petId !== null && !this.petDesbloqueado(petId)) return false;
+      state.pet = petId;
+      salvarSave();
+      return true;
     },
 
     // ===================== CONQUISTAS =====================

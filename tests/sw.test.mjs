@@ -6,7 +6,7 @@
  * offline (o tipo de bug que passa no teste local). Este teste garante que:
  *   1. todo arquivo listado em ASSETS existe no repositório (pega typos);
  *   2. todo script/CSS/manifest/ícone referenciado no index.html está em ASSETS;
- *   3. todo SVG de herói/roupa (HEROIS + ROUPAS) está em ASSETS.
+ *   3. todo SVG de herói/roupa/pet (HEROIS + ROUPAS + PETS) está em ASSETS.
  */
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -48,20 +48,22 @@ for (const r of refs) {
   ok(ASSETS.includes(r), `index.html usa "${r}", mas não está em ASSETS do sw.js`);
 }
 
-// 3) todo SVG de herói/roupa está em ASSETS
+// 3) todo SVG de herói/roupa/pet está em ASSETS
 const codeHerois = readFileSync(join(raiz, "js/data/herois.js"), "utf8");
 const codeRoupas = readFileSync(join(raiz, "js/data/roupas.js"), "utf8");
-const { HEROIS, ROUPAS } = new Function(
-  codeHerois + "\n" + codeRoupas + "\nreturn { HEROIS, ROUPAS };"
+const codePets = readFileSync(join(raiz, "js/data/pets.js"), "utf8");
+const { HEROIS, ROUPAS, PETS } = new Function(
+  codeHerois + "\n" + codeRoupas + "\n" + codePets + "\nreturn { HEROIS, ROUPAS, PETS };"
 )();
 const svgs = new Set();
 HEROIS.forEach((h) => svgs.add(`assets/herois/${h.file}.svg`));
 Object.values(ROUPAS).forEach((lista) =>
   lista.forEach((r) => svgs.add(`assets/herois/${r.file}.svg`))
 );
+PETS.forEach((p) => svgs.add(`assets/pets/pet-${p.id}.svg`));
 for (const svg of svgs) {
-  ok(existsSync(join(raiz, svg)), `herois/roupas referem "${svg}", mas o arquivo não existe`);
-  ok(ASSETS.includes(svg), `"${svg}" (herói/roupa) não está em ASSETS do sw.js`);
+  ok(existsSync(join(raiz, svg)), `herois/roupas/pets referem "${svg}", mas o arquivo não existe`);
+  ok(ASSETS.includes(svg), `"${svg}" (herói/roupa/pet) não está em ASSETS do sw.js`);
 }
 
 if (falhas) {
