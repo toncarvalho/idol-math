@@ -312,8 +312,13 @@ const Storage = (() => {
     },
 
     // ===================== REPETIÇÃO INTELIGENTE (fatos fracos) + ESTATÍSTICAS =====================
-    registrarResposta(a, b, acertou) {
-      const k = MathEngine.chaveFato(a, b); // chave canônica compartilhada com o motor
+    /**
+     * Registra acerto/erro de um fato. `chave` vem pronta da pergunta
+     * (q.chave): "7x8" (tabuada e divisão — compartilham), "3+7" ou "15-6"
+     * (mundo Soma & Subtração). Peso alto = errou mais = repete mais.
+     */
+    registrarResposta(chave, acertou) {
+      const k = chave;
       let p = state.fatos[k] || 0;
       p = acertou ? Math.max(0, p * 0.5 - 0.2) : Math.min(8, p + 2);
       if (p <= 0.01) delete state.fatos[k];
@@ -349,17 +354,24 @@ const Storage = (() => {
       const lista = [];
       for (const k in state.fatos) {
         const peso = state.fatos[k];
-        const partes = k.split("x").map(Number);
-        const a = partes[0];
-        const b = partes[1];
-        if (a >= 1 && a <= 10) fraqueza[a] += peso;
-        if (b >= 1 && b <= 10 && b !== a) fraqueza[b] += peso;
-        lista.push({ a, b, peso });
+        // chaves: "7x8" (tabuada/divisão), "3+7" (soma), "15-6" (subtração)
+        const m = /^(\d+)([x+\-])(\d+)$/.exec(k);
+        if (!m) continue;
+        const a = +m[1];
+        const op = m[2];
+        const b = +m[3];
+        if (op === "x") {
+          // o mapa de calor por tabuada é da multiplicação/divisão
+          if (a >= 1 && a <= 10) fraqueza[a] += peso;
+          if (b >= 1 && b <= 10 && b !== a) fraqueza[b] += peso;
+        }
+        lista.push({ a, b, op, peso });
       }
       let maxFraqueza = 0;
       for (let t = 1; t <= 10; t++) maxFraqueza = Math.max(maxFraqueza, fraqueza[t]);
       lista.sort((x, y) => y.peso - x.peso);
-      const fatosFracos = lista.slice(0, 6).map((f) => `${f.a}×${f.b}`);
+      const SIMBOLO = { x: "×", "+": "+", "-": "−" };
+      const fatosFracos = lista.slice(0, 6).map((f) => `${f.a}${SIMBOLO[f.op]}${f.b}`);
 
       return {
         acertos,

@@ -102,6 +102,75 @@ for (let i = 0; i < 2000; i++) {
   ok(q.fatoA === 7 && q.fatoA * q.fatoB === q.a, "fato canônico é a multiplicação por trás");
 }
 
+// ===================== SOMA & SUBTRAÇÃO =====================
+
+// chaveConta: soma canônica, subtração preserva a ordem
+ok(MathEngine.chaveConta(3, 7, "+") === MathEngine.chaveConta(7, 3, "+"), "chave de soma canônica");
+ok(MathEngine.chaveConta(3, 7, "+") === "3+7", "chave de soma legível");
+ok(MathEngine.chaveConta(15, 6, "-") === "15-6", "chave de subtração preserva a ordem");
+
+// cada degrau da escada respeita as próprias restrições
+const SPECS = {
+  contar: { spec: { tipo: "contar", max: 10 }, ok: (q) => q.op === "+" && Math.min(q.a, q.b) <= 2 && q.resposta <= 10 },
+  somaAte: { spec: { tipo: "somaAte", max: 10 }, ok: (q) => q.op === "+" && q.resposta <= 10 && q.a >= 1 && q.b >= 1 },
+  dobros: { spec: { tipo: "dobros", max: 20 }, ok: (q) => q.op === "+" && Math.abs(q.a - q.b) <= 1 && q.resposta <= 20 },
+  amigos10: { spec: { tipo: "amigos10" }, ok: (q) => q.op === "+" && (q.resposta === 10 || q.a === 10 || q.b === 10) },
+  somaCruza: { spec: { tipo: "somaCruza", max: 18 }, ok: (q) => q.op === "+" && q.resposta >= 11 && q.resposta <= 18 && q.a <= 9 && q.b <= 9 },
+  subAte: { spec: { tipo: "subAte", max: 10 }, ok: (q) => q.op === "-" && q.a <= 10 && q.resposta >= 1 },
+  subSem: { spec: { tipo: "subSem" }, ok: (q) => q.op === "-" && q.a >= 11 && q.a <= 19 && q.b <= q.a % 10 },
+  subCruza: { spec: { tipo: "subCruza" }, ok: (q) => q.op === "-" && q.a >= 11 && q.a <= 18 && q.b > q.a % 10 && q.resposta >= 1 && q.resposta <= 9 },
+  dezenas: { spec: { tipo: "dezenas" }, ok: (q) => q.a % 10 === 0 && q.b % 10 === 0 && q.resposta >= 10 && q.resposta <= 100 },
+  doisDigitosSem: { spec: { tipo: "doisDigitos", op: "+" }, ok: (q) => q.op === "+" && (q.a % 10) + (q.b % 10) <= 9 && q.resposta <= 99 },
+  doisDigitosCruzaMais: { spec: { tipo: "doisDigitosCruza", op: "+" }, ok: (q) => q.op === "+" && (q.a % 10) + (q.b % 10) >= 10 && q.resposta <= 100 },
+  doisDigitosCruzaMenos: { spec: { tipo: "doisDigitosCruza", op: "-" }, ok: (q) => q.op === "-" && q.a % 10 < q.b % 10 && q.resposta >= 1 },
+  mistura: { spec: { tipo: "mistura", de: [{ tipo: "contar", max: 10 }, { tipo: "subAte", max: 10 }] }, ok: (q) => q.op === "+" || q.op === "-" },
+};
+for (const nome in SPECS) {
+  const { spec, ok: valida } = SPECS[nome];
+  for (let i = 0; i < 400; i++) {
+    const q = MathEngine.gerarPerguntaConta(spec);
+    const calc = q.op === "+" ? q.a + q.b : q.a - q.b;
+    ok(calc === q.resposta, `${nome}: a ${q.op} b = resposta (${q.texto})`);
+    ok(valida(q), `${nome}: restrições do degrau (${q.texto})`);
+    ok(q.chave === MathEngine.chaveConta(q.fatoA, q.fatoB, q.op), `${nome}: chave coerente`);
+    ok(!!q.falado, `${nome}: tem texto falado`);
+  }
+}
+
+// subtração nunca inverte a ordem exibida (não é comutativa)
+for (let i = 0; i < 300; i++) {
+  const q = MathEngine.gerarPerguntaConta({ tipo: "subCruza" });
+  ok(q.a === q.fatoA && q.b === q.fatoB, "subtração mantém a ordem a−b");
+}
+
+// opções de conta: 4 únicas, positivas, com a resposta e o erro de dezena
+for (let i = 0; i < 1000; i++) {
+  const q = MathEngine.gerarPerguntaConta({ tipo: "doisDigitosCruza", op: "+" });
+  const ops = MathEngine.gerarOpcoesConta(q.resposta, q.a, q.b, q.op);
+  ok(ops.length === 4 && new Set(ops).size === 4, "conta: 4 opções únicas");
+  ok(ops.includes(q.resposta), "conta: contém a resposta");
+  ok(ops.every((n) => n > 0), "conta: opções positivas");
+  ok(ops.includes(q.resposta - 10), `vai-um esquecido entre as opções (${q.texto})`);
+}
+for (let i = 0; i < 1000; i++) {
+  const q = MathEngine.gerarPerguntaConta({ tipo: "doisDigitosCruza", op: "-" });
+  const ops = MathEngine.gerarOpcoesConta(q.resposta, q.a, q.b, q.op);
+  ok(ops.includes(q.resposta + 10), `emprestar esquecido entre as opções (${q.texto})`);
+}
+
+// repetição inteligente na soma: fato fraco "3+7" aparece mais
+{
+  const fracos = { "3+7": 8 };
+  let c37 = 0;
+  const M = 4000;
+  for (let i = 0; i < M; i++) {
+    const q = MathEngine.gerarPerguntaConta({ tipo: "somaAte", max: 10 }, fracos);
+    if (MathEngine.chaveConta(q.fatoA, q.fatoB, "+") === "3+7") c37++;
+  }
+  // sem peso, 3+7 sairia ~2% (2 de ~45 pares); com peso 8 deve passar de 8%
+  ok(c37 / M > 0.08, `3+7 ponderado deve aparecer mais (${((c37 / M) * 100).toFixed(1)}%)`);
+}
+
 // divisão compartilha os pesos da repetição inteligente com a tabuada:
 // o peso de "7x8" também puxa 56 ÷ 7
 {

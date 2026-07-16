@@ -74,10 +74,10 @@ function ok(cond, msg) {
   const ls = makeLS();
   const S = loadStorage(ls);
   S.criarPerfil("Bia", 1);
-  S.registrarResposta(2, 3, true);
-  S.registrarResposta(2, 4, true);
-  S.registrarResposta(2, 5, true);
-  S.registrarResposta(7, 8, false); // erro
+  S.registrarResposta("2x3", true);
+  S.registrarResposta("2x4", true);
+  S.registrarResposta("2x5", true);
+  S.registrarResposta("7x8", false); // erro
   const e = S.estatisticas();
   ok(e.acertos === 3 && e.erros === 1, "estat conta 3 acertos / 1 erro");
   ok(e.precisao === 75, "precisão = 75%");
@@ -85,6 +85,24 @@ function ok(cond, msg) {
   ok(e.fraquezaTabuadas[2] === 0, "tabuada 2 sem fraqueza (só acertos)");
   ok(e.fatosFracos.includes("7×8"), "fatosFracos inclui 7×8");
   ok(e.maxFraqueza > 0, "maxFraqueza > 0");
+}
+
+// 3b) Chaves de +/− convivem com as da tabuada nas estatísticas
+{
+  const ls = makeLS();
+  const S = loadStorage(ls);
+  S.criarPerfil("Duda", 1);
+  S.registrarResposta("7x8", false);
+  S.registrarResposta("3+7", false);
+  S.registrarResposta("15-6", false);
+  const e = S.estatisticas();
+  ok(e.erros === 3, "3 erros registrados (mistos)");
+  ok(e.fatosFracos.includes("7×8"), "fatosFracos mostra 7×8");
+  ok(e.fatosFracos.includes("3+7"), "fatosFracos mostra 3+7");
+  ok(e.fatosFracos.includes("15−6"), "fatosFracos mostra 15−6 (sinal de menos)");
+  ok(!e.fatosFracos.some((f) => /NaN/.test(f)), "sem NaN nos fatos fracos");
+  ok(e.fraquezaTabuadas[7] > 0 && e.fraquezaTabuadas[8] > 0, "mapa de calor só com a tabuada");
+  ok(e.fraquezaTabuadas[3] === 0, "chave 3+7 não vaza para o mapa da tabuada");
 }
 
 // 4) adicionarTempo
@@ -105,7 +123,7 @@ function ok(cond, msg) {
   const S = loadStorage(ls);
   const ana = S.criarPerfil("Ana", 1);
   S.setEstrelas(1, 3);
-  S.registrarResposta(9, 9, false);
+  S.registrarResposta("9x9", false);
   const bia = S.criarPerfil("Bia", 2); // novo perfil vira atual
   ok(S.totalEstrelas() === 0, "Bia começa sem estrelas (isolado)");
   ok(S.estatisticas().total === 0, "Bia começa sem estatísticas");

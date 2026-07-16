@@ -120,7 +120,7 @@ class TrainScene extends Phaser.Scene {
     if (this.respondendo) return;
     this.respondendo = true;
     const certo = valor === this.q.resposta;
-    Storage.registrarResposta(this.q.fatoA, this.q.fatoB, certo);
+    Storage.registrarResposta(this.q.chave, certo);
     if (certo) {
       this.acertos += 1;
       Storage.addMoedas(JOGO.moedas.treinoAcerto);

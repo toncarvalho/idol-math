@@ -1,6 +1,7 @@
 /**
- * MathEngine — geração pura de perguntas (multiplicação e divisão) e
- * alternativas. Sem dependência do Phaser, fácil de testar isoladamente.
+ * MathEngine — geração pura de perguntas (multiplicação, divisão e contas
+ * de +/−) e alternativas. Sem dependência do Phaser, fácil de testar
+ * isoladamente.
  *
  * Multiplicação e divisão COMPARTILHAM a mesma tabela de fatos e os mesmos
  * pesos de repetição inteligente: errar 56 ÷ 7 e errar 7 × 8 é o mesmo buraco
@@ -17,6 +18,16 @@ const MathEngine = (() => {
 
   function chaveFato(a, b) {
     return `${Math.min(a, b)}x${Math.max(a, b)}`;
+  }
+
+  /**
+   * Chave de peso para contas de +/− (repetição inteligente). Soma é
+   * comutativa → canônica ("3+7"); subtração NÃO → preserva a ordem ("15-6").
+   * Convivem no mesmo mapa `fatos` das chaves "AxB" da tabuada/divisão.
+   */
+  function chaveConta(a, b, op) {
+    if (op === "+") return `${Math.min(a, b)}+${Math.max(a, b)}`;
+    return `${a}-${b}`;
   }
 
   /**
@@ -74,6 +85,7 @@ const MathEngine = (() => {
       falado: `${x} vezes ${y}`,
       fatoA: a,
       fatoB: b,
+      chave: chaveFato(a, b),
     };
   }
 
@@ -98,7 +110,188 @@ const MathEngine = (() => {
       falado: `${produto} dividido por ${divisor}`,
       fatoA: fato.a,
       fatoB: fato.b,
+      chave: chaveFato(fato.a, fato.b),
     };
+  }
+
+  // ===================== SOMA & SUBTRAÇÃO =====================
+
+  /**
+   * Catálogo dos geradores de conta (+/−). Cada fase do mundo Soma &
+   * Subtração declara `conta: { tipo, ... }` — um degrau da escada
+   * pedagógica (1º–2º ano), do contar pra frente até o emprestar:
+   *
+   *  contar {max}            a+1 / a+2, resultado ≤ max
+   *  somaAte {max}           a+b ≤ max (a, b ≥ 1)
+   *  dobros {max}            b ∈ {a−1, a, a+1} — dobros e quase-dobros
+   *  amigos10                pares que fazem 10 (7+3) e somas com 10 (10+5)
+   *  somaCruza {max}         a, b ∈ 2..9 cruzando a dezena (11 ≤ a+b ≤ max)
+   *  subAte {max}            a−b com a ≤ max, resultado ≥ 1
+   *  subSem                  11..19 menos unidades, SEM emprestar (17−5)
+   *  subCruza                11..18 menos 2..9 cruzando a dezena (13−7)
+   *  dezenas                 dezenas cheias, + e − (30+20, 70−40)
+   *  doisDigitos {op}        2 dígitos SEM vai-um/emprestar (23+45, 57−24)
+   *  doisDigitosCruza {op}   2 dígitos COM vai-um (27+45) ou emprestar (52−27)
+   *  mistura {de: [spec...]} união de outros specs (fase final)
+   */
+  function candidatosConta(spec) {
+    const lista = [];
+    const add = (a, b, op) => lista.push({ a, b, op });
+    switch (spec.tipo) {
+      case "contar":
+        for (let a = 1; a <= spec.max - 1; a++)
+          for (const b of [1, 2]) if (a + b <= spec.max) add(a, b, "+");
+        break;
+      case "somaAte":
+        for (let a = 1; a < spec.max; a++)
+          for (let b = 1; b <= spec.max - a; b++) add(a, b, "+");
+        break;
+      case "dobros":
+        for (let a = 2; a <= 10; a++)
+          for (const b of [a - 1, a, a + 1])
+            if (b >= 1 && a + b <= spec.max) add(a, b, "+");
+        break;
+      case "amigos10":
+        for (let a = 1; a <= 9; a++) add(a, 10 - a, "+");
+        for (let b = 1; b <= 9; b++) add(10, b, "+");
+        break;
+      case "somaCruza":
+        for (let a = 2; a <= 9; a++)
+          for (let b = 2; b <= 9; b++)
+            if (a + b >= 11 && a + b <= spec.max) add(a, b, "+");
+        break;
+      case "subAte":
+        for (let a = 2; a <= spec.max; a++)
+          for (let b = 1; b <= a - 1; b++) add(a, b, "-");
+        break;
+      case "subSem":
+        for (let a = 11; a <= 19; a++)
+          for (let b = 1; b <= a % 10; b++) add(a, b, "-");
+        break;
+      case "subCruza":
+        for (let a = 11; a <= 18; a++)
+          for (let b = (a % 10) + 1; b <= 9; b++) add(a, b, "-");
+        break;
+      case "dezenas":
+        for (let a = 10; a <= 90; a += 10) {
+          for (let b = 10; b <= 100 - a; b += 10) add(a, b, "+");
+          for (let b = 10; b < a; b += 10) add(a, b, "-");
+        }
+        break;
+      case "doisDigitos":
+        for (let a = 11; a <= 88; a++) {
+          if (a % 10 === 0) continue;
+          for (let b = 11; b <= 88; b++) {
+            if (b % 10 === 0) continue;
+            if (
+              spec.op === "+"
+                ? (a % 10) + (b % 10) <= 9 && a + b <= 99
+                : a > b && a % 10 >= b % 10
+            )
+              add(a, b, spec.op);
+          }
+        }
+        break;
+      case "doisDigitosCruza":
+        for (let a = 11; a <= 89; a++) {
+          if (a % 10 === 0) continue;
+          for (let b = 11; b <= 89; b++) {
+            if (b % 10 === 0) continue;
+            if (
+              spec.op === "+"
+                ? (a % 10) + (b % 10) >= 10 && a + b <= 100
+                : a > b && a % 10 < b % 10
+            )
+              add(a, b, spec.op);
+          }
+        }
+        break;
+      case "mistura":
+        spec.de.forEach((s) => lista.push(...candidatosConta(s)));
+        break;
+    }
+    return lista;
+  }
+
+  /**
+   * Gera uma pergunta de soma/subtração a partir do spec da fase, com o
+   * mesmo sorteio ponderado da tabuada (fatos fracos aparecem mais; chaves
+   * "3+7" / "15-6" via chaveConta). Soma alterna a ordem exibida; subtração
+   * não (não é comutativa).
+   */
+  function gerarPerguntaConta(spec, fatos) {
+    const lista = candidatosConta(spec);
+    let pick;
+    if (fatos && Object.keys(fatos).length) {
+      let total = 0;
+      for (const c of lista) {
+        c.peso = 1 + (fatos[chaveConta(c.a, c.b, c.op)] || 0) * 1.5;
+        total += c.peso;
+      }
+      let r = Math.random() * total;
+      pick = lista[0];
+      for (const c of lista) {
+        r -= c.peso;
+        if (r <= 0) {
+          pick = c;
+          break;
+        }
+      }
+    } else {
+      pick = escolher(lista);
+    }
+    let a = pick.a;
+    let b = pick.b;
+    if (pick.op === "+" && Math.random() < 0.5) {
+      const t = a;
+      a = b;
+      b = t;
+    }
+    const resposta = pick.op === "+" ? a + b : a - b;
+    return {
+      a,
+      b,
+      op: pick.op,
+      resposta,
+      texto: `${a} ${pick.op === "+" ? "+" : "−"} ${b}`,
+      falado: pick.op === "+" ? `${a} mais ${b}` : `${a} menos ${b}`,
+      fatoA: pick.a,
+      fatoB: pick.b,
+      chave: chaveConta(pick.a, pick.b, pick.op),
+    };
+  }
+
+  /**
+   * Alternativas para contas de +/− com os erros que criança comete de
+   * verdade: erro de dezena (esqueceu o vai-um: resposta−10 / não emprestou:
+   * resposta+10), "inverteu as unidades" na subtração (52−27 → 35) e erros
+   * de contagem (±1, ±2). Sempre 4 opções únicas e positivas.
+   */
+  function gerarOpcoesConta(resposta, a, b, op) {
+    const opcoes = new Set([resposta]);
+    const seeds = [];
+    if (op === "+" && (a % 10) + (b % 10) >= 10) seeds.push(resposta - 10);
+    if (op === "-" && a % 10 < b % 10) {
+      seeds.push(resposta + 10);
+      seeds.push((Math.floor(a / 10) - Math.floor(b / 10)) * 10 + ((b % 10) - (a % 10)));
+    }
+    seeds.push(resposta + 1, resposta - 1, resposta + 2, resposta - 2);
+    for (const s of seeds) {
+      if (opcoes.size >= 4) break;
+      if (s > 0 && s !== resposta) opcoes.add(s);
+    }
+    let i = 0;
+    while (opcoes.size < 4 && i < 50) {
+      const c = resposta + inteiroAleatorio(-6, 6);
+      if (c > 0 && c !== resposta) opcoes.add(c);
+      i++;
+    }
+    let extra = 1;
+    while (opcoes.size < 4) {
+      if (!opcoes.has(resposta + extra)) opcoes.add(resposta + extra);
+      extra++;
+    }
+    return embaralhar([...opcoes]);
   }
 
   /**
@@ -166,5 +359,15 @@ const MathEngine = (() => {
     return a;
   }
 
-  return { gerarPergunta, gerarPerguntaDivisao, gerarOpcoes, embaralhar, inteiroAleatorio, chaveFato };
+  return {
+    gerarPergunta,
+    gerarPerguntaDivisao,
+    gerarPerguntaConta,
+    gerarOpcoes,
+    gerarOpcoesConta,
+    embaralhar,
+    inteiroAleatorio,
+    chaveFato,
+    chaveConta,
+  };
 })();

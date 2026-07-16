@@ -85,7 +85,6 @@ const MUNDOS = [
     emoji: "🌟",
     descricao: "Contas de mais e de menos (1º–2º ano)",
     cor: 0x36d96b,
-    emBreve: true,
   },
   {
     id: "tabuada",
@@ -262,6 +261,65 @@ FASES.slice(0, NOMES_DIVISAO.length).forEach((f, i) => {
       nome: f.boss.nome,
       emoji: f.boss.emoji,
       frase: d.frase,
+      mecanica: f.boss.mecanica,
+    },
+  });
+});
+
+/**
+ * MUNDO SOMA & SUBTRAÇÃO — a "Turnê de Ensaio" (prequel: os chefões antes da
+ * fama, mesma arte via imgInimigo/imgBoss). Escada pedagógica em DEGRAUS
+ * MÍNIMOS (1º–2º ano): cada fase adiciona UMA dificuldade nova. O conteúdo
+ * de cada fase é um spec `conta` (catálogo em MathEngine.candidatosConta).
+ */
+const FASES_SOMA = [
+  { nome: "Primeiro Ensaio", desc: "Some 1 ou 2: um passo de cada vez!", foco: "+1 +2",
+    conta: { tipo: "contar", max: 10 }, frase: "Vamos começar devagarinho!" },
+  { nome: "Aquecimento", desc: "Todas as somas até 10.", foco: "+ até 10",
+    conta: { tipo: "somaAte", max: 10 }, frase: "Aqueça esses números!" },
+  { nome: "Dança dos Dobros", desc: "Dobros e quase-dobros: 6+6, 6+7!", foco: "Dobros",
+    conta: { tipo: "dobros", max: 20 }, frase: "Dobra o ritmo!" },
+  { nome: "Amigos do Dez", desc: "Pares que fazem 10, e somas com 10.", foco: "Faz 10",
+    conta: { tipo: "amigos10" }, frase: "Todo número tem seu par!" },
+  { nome: "Salto da Dezena", desc: "Somas que passam do 10: 8+5!", foco: "+ passa 10",
+    conta: { tipo: "somaCruza", max: 18 }, frase: "Salte além do dez!" },
+  { nome: "Passos para Trás", desc: "Agora é tirar: subtração até 10.", foco: "− até 10",
+    conta: { tipo: "subAte", max: 10 }, frase: "Volte no escuro!" },
+  { nome: "Ritmo Leve", desc: "Tirar até 20, sem emprestar: 17−5.", foco: "− até 20",
+    conta: { tipo: "subSem" }, frase: "Tire de leve, sem trovejar!" },
+  { nome: "Salto para Trás", desc: "Subtração que passa do 10: 13−7!", foco: "− passa 10",
+    conta: { tipo: "subCruza" }, frase: "Volte pela minha teia!" },
+  { nome: "Show das Dezenas", desc: "Dezenas inteiras: 30+20, 70−40.", foco: "Dezenas",
+    conta: { tipo: "dezenas" }, frase: "Dezenas inteiras, vidas inteiras!" },
+  { nome: "Dupla no Palco", desc: "Dois dígitos tranquilos: 23+45, 57−24.", foco: "2 dígitos",
+    conta: { tipo: "mistura", de: [{ tipo: "doisDigitos", op: "+" }, { tipo: "doisDigitos", op: "-" }] },
+    frase: "Dois dígitos, um só reino!" },
+  { nome: "Vai-Um no Palco", desc: "Somas com vai-um: 27+45!", foco: "Vai-um",
+    conta: { tipo: "doisDigitosCruza", op: "+" }, frase: "O um vai... e você?" },
+  { nome: "Ensaio Geral", desc: "Com emprestar + misturão: 52−27, 38+47!", foco: "Mix final",
+    conta: { tipo: "mistura", de: [{ tipo: "doisDigitosCruza", op: "-" }, { tipo: "doisDigitosCruza", op: "+" }] },
+    frase: "Mostre que está pronta para o palco!" },
+];
+// espelha as fases da TABUADA (as 12 primeiras do array; a Divisão já foi
+// adicionada ao final, então filtramos pelas fases sem `mundo`)
+FASES.filter((f) => !f.mundo).forEach((f, i) => {
+  const s = FASES_SOMA[i];
+  if (!s) return;
+  FASES.push({
+    id: `s${f.id}`,
+    mundo: "soma",
+    nome: s.nome,
+    descricao: s.desc,
+    conta: s.conta,
+    foco: s.foco,
+    corTema: f.corTema,
+    inimigoEmoji: f.inimigoEmoji,
+    imgInimigo: `inimigo${f.id}`,
+    imgBoss: `boss${f.id}`,
+    boss: {
+      nome: f.boss.nome,
+      emoji: f.boss.emoji,
+      frase: s.frase,
       mecanica: f.boss.mecanica,
     },
   });

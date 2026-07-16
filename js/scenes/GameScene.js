@@ -557,16 +557,19 @@ class GameScene extends Phaser.Scene {
       this.flashcard.destroy();
       this.flashcard = null;
     }
-    this.q =
-      this.operacao === "divisao"
-        ? MathEngine.gerarPerguntaDivisao(this.fase.tabuadas, JOGO.faixaFator, Storage.getFatos())
-        : MathEngine.gerarPergunta(this.fase.tabuadas, JOGO.faixaFator, Storage.getFatos());
-    // divisão NÃO passa a/b: os distratores certos são quocientes vizinhos
-    // (deltas ±1, ±2), não produtos da linha vizinha (escala errada)
-    this.opcoes =
-      this.operacao === "divisao"
-        ? MathEngine.gerarOpcoes(this.q.resposta)
-        : MathEngine.gerarOpcoes(this.q.resposta, this.q.a, this.q.b);
+    const fatos = Storage.getFatos();
+    if (this.operacao === "soma") {
+      this.q = MathEngine.gerarPerguntaConta(this.fase.conta, fatos);
+      this.opcoes = MathEngine.gerarOpcoesConta(this.q.resposta, this.q.a, this.q.b, this.q.op);
+    } else if (this.operacao === "divisao") {
+      this.q = MathEngine.gerarPerguntaDivisao(this.fase.tabuadas, JOGO.faixaFator, fatos);
+      // divisão NÃO passa a/b: os distratores certos são quocientes vizinhos
+      // (deltas ±1, ±2), não produtos da linha vizinha (escala errada)
+      this.opcoes = MathEngine.gerarOpcoes(this.q.resposta);
+    } else {
+      this.q = MathEngine.gerarPergunta(this.fase.tabuadas, JOGO.faixaFator, fatos);
+      this.opcoes = MathEngine.gerarOpcoes(this.q.resposta, this.q.a, this.q.b);
+    }
     this.txtPergunta.setText(`${this.q.texto} = ?`);
     GameUI.anunciar(`Quanto é ${this.q.falado}?`);
     Util.falar(this.q.falado);
@@ -578,7 +581,7 @@ class GameScene extends Phaser.Scene {
     // pet 🦜 Bis: na 1ª pergunta difícil (fato com peso alto) — ou no chefão,
     // se nenhuma apareceu — canta a dica: apaga 2 alternativas erradas
     if (this.temPoder("dica5050") && !this.petUsado) {
-      const peso = (Storage.getFatos() || {})[MathEngine.chaveFato(this.q.fatoA, this.q.fatoB)] || 0;
+      const peso = (Storage.getFatos() || {})[this.q.chave] || 0;
       if (peso >= 4 || this.isBoss) {
         this.petUsado = true;
         // guarda as apagadas: o chefão "embaralha" re-renderiza os botões e
@@ -695,9 +698,9 @@ class GameScene extends Phaser.Scene {
     this.cancelarEmbaralho();
     this.pararTimer();
     const certo = valor === this.q.resposta;
-    // peso registrado no fato CANÔNICO (7x8): a divisão compartilha os pesos
-    // com a tabuada — errar 56÷7 e errar 7×8 é o mesmo buraco de conhecimento
-    Storage.registrarResposta(this.q.fatoA, this.q.fatoB, certo);
+    // peso na chave da pergunta: "7x8" (tabuada E divisão — mesmo buraco de
+    // conhecimento), "3+7" / "15-6" (soma & subtração)
+    Storage.registrarResposta(this.q.chave, certo);
     if (certo) this.acertar();
     else this.errar(valor);
   }
@@ -816,8 +819,13 @@ class GameScene extends Phaser.Scene {
         (protegido ? " Seu escudo te protegeu!" : "")
     );
     this.txtDica.setText(`${this.q.texto} = ${this.q.resposta}`).setVisible(true);
-    // a grade de pontos mostra o fato por trás (56÷7 → grade 7×8: o conceito)
-    this.flashcard = Util.flashcardMultiplicacao(this, this.q.fatoA, this.q.fatoB, 0x36d96b);
+    // reforço conceitual: grade a×b para tabuada/divisão (56÷7 → grade 7×8);
+    // bolinhas de juntar/tirar para +/− (só até 20 pontos — acima disso a
+    // dica textual basta)
+    this.flashcard =
+      this.operacao === "soma"
+        ? Util.flashcardConta(this, this.q.a, this.q.b, this.q.op, 0x36d96b)
+        : Util.flashcardMultiplicacao(this, this.q.fatoA, this.q.fatoB, 0x36d96b);
     this.flutuarTexto(protegido ? "🛡️ Escudo protegeu!" : "-1 ❤️", protegido ? "#9ad8ff" : "#ff5050");
     this.atualizarHUD();
 

@@ -144,6 +144,29 @@ ok(proximaFase("d1").id === "d2", "próxima da d1 é a d2");
 ok(proximaFase("d12") === null, "última fase da Divisão não tem próxima");
 ok(getFase("d3").nome === fd[2].nome, "getFase encontra fase por id string");
 
+// MUNDO SOMA & SUBTRAÇÃO: 12 degraus mínimos (Turnê de Ensaio)
+const soma = MUNDOS.find((m) => m.id === "soma");
+ok(!!soma && !soma.emBreve, "mundo Soma & Subtração existe e está jogável");
+const fs_ = fasesDoMundo("soma");
+ok(fs_.length === 12, "Soma & Subtração tem 12 fases");
+ok(fs_.every((f, i) => f.id === `s${i + 1}`), "ids da Soma são s1–s12 em ordem");
+const TIPOS_CONTA = [
+  "contar", "somaAte", "dobros", "amigos10", "somaCruza", "subAte",
+  "subSem", "subCruza", "dezenas", "doisDigitos", "doisDigitosCruza", "mistura",
+];
+fs_.forEach((f, i) => {
+  const orig = ft[i];
+  ok(!!f.conta && TIPOS_CONTA.includes(f.conta.tipo), `s${i + 1}: spec de conta conhecido (${f.conta && f.conta.tipo})`);
+  if (f.conta.tipo === "mistura") {
+    ok(f.conta.de.every((s) => TIPOS_CONTA.includes(s.tipo)), `s${i + 1}: specs da mistura conhecidos`);
+  }
+  ok(f.imgInimigo === `inimigo${orig.id}` && f.imgBoss === `boss${orig.id}`,
+    `s${i + 1} reaproveita a arte da fase ${orig.id}`);
+  ok(f.boss.mecanica === orig.boss.mecanica, `s${i + 1} espelha a mecânica do chefão`);
+  ok(!!f.foco, `s${i + 1} declara o rótulo foco`);
+});
+ok(proximaFase("s12") === null, "última fase da Soma não tem próxima");
+
 if (falhas) {
   console.error(`\n❌ Regras: ${falhas} verificação(ões) falharam.`);
   process.exit(1);

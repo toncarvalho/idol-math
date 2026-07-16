@@ -126,8 +126,8 @@ A grande vantagem: **o jogo não coleta dado nenhum** — tudo é `localStorage`
       Tabuada dentro, prévias "Em breve" de Soma e Divisão (ver §12).
 - [x] Mundo da Divisão no ar: "Turnê Reversa", 12 fases espelhando a Tabuada
       com pesos de repetição compartilhados (§12).
-- [ ] Mundo Soma & Subtração (§12 — vira a demo web; pode ir para a Fase 2
-      se atrasar o lançamento Android).
+- [x] Mundo Soma & Subtração no ar: "Turnê de Ensaio", 12 degraus mínimos
+      estilo Kumon; vira a demo web (§12).
 - [ ] Implementar flag `DEMO` e gating de conteúdo na web (com mundos: demo =
       Soma & Subtração completo; ver §12).
 - [ ] Empacotar com Capacitor (Android), assinar, testes internos.
@@ -211,9 +211,14 @@ que se sustentem ao lado dos concorrentes pagos da categoria.
 
 | # | Mundo | Conteúdo | Estado |
 |---|-------|----------|--------|
-| 1 | 🌟 **Soma & Subtração** | Contas de +/− por faixa numérica (1º–2º ano) | 🎯 PRÓXIMO PASSO (o maior) |
+| 1 | 🌟 **Soma & Subtração** | Contas de +/− (1º–2º ano) | ✅ no ar (16/07/2026): "Turnê de Ensaio", 12 fases s1–s12 em degraus mínimos estilo Kumon (escada: +1/+2 → até 10 → dobros → amigos do 10 → passa 10 → subtração → dezenas → 2 dígitos → vai-um → emprestar); chaves de peso próprias ("3+7", "15-6"); flashcard de bolinhas (juntar/tirar) no erro |
 | 2 | 🎤 **Tabuada** | O jogo atual, fases 1–12 intactas | ✅ no ar, dentro da estrutura de mundos |
 | 3 | ⚡ **Divisão** | Tabuada ao contrário: 56 ÷ 7 (4º ano) | ✅ no ar (16/07/2026): "Turnê Reversa", 12 fases d1–d12 espelhando a Tabuada (mesma arte e mecânicas de chefão), pesos de repetição compartilhados com a tabuada |
+
+> 🎉 **Os 3 mundos estão no ar.** O plano de conteúdo desta seção foi
+> concluído em 16/07/2026; ficam pendentes as decisões marcadas abaixo
+> (Desafio do Dia multi-mundo, arte própria opcional) e os itens Kumon do
+> §12 (nivelamento, fluência), que dependem apenas de priorização.
 
 A ordem 1→2→3 é a progressão pedagógica da criança — Soma & Subtração vem
 ANTES da tabuada na escola. Efeito comercial: amplia a faixa etária de ~8–10
@@ -239,7 +244,10 @@ app pago.
 - **Sequência de construção**: (a) ✅ estrutura de mundos com a Tabuada
   dentro; (b) ✅ Divisão (validou a estrutura; `gerarPerguntaDivisao` no
   MathEngine, distratores = quocientes vizinhos, flashcard mostra a grade da
-  multiplicação por trás); (c) 🎯 Soma & Subtração por último.
+  multiplicação por trás); (c) ✅ Soma & Subtração (`gerarPerguntaConta` com
+  catálogo de 12 specs data-driven em `fase.conta`; distratores reais: ±1/±2,
+  vai-um/emprestar esquecido (±10), unidades invertidas; "Turnê de Ensaio"
+  reusa a arte como a Divisão).
 - **Divisão sem arte própria por decisão**: é a "Turnê Reversa" — os mesmos
   chefões voltam com as contas ao contrário (`imgInimigo`/`imgBoss` reusam as
   texturas da Tabuada). Se um dia quisermos arte própria, o gancho já existe.
