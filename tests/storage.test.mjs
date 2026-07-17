@@ -308,8 +308,8 @@ function ok(cond, msg) {
   ok(S.petDesbloqueado("mimi") === false, "pet bloqueado sem a conquista");
   ok(S.equiparPet("mimi") === false, "não equipa pet bloqueado");
   ok(S.petEquipado() === null, "segue sem pet após tentativa inválida");
-  // desbloqueia a conquista "estreia" (vencer a 1ª fase) → adota a Mimi
-  S.desbloquearFase(2);
+  // desbloqueia a conquista "estreia" (1ª estrela = venceu uma fase) → adota a Mimi
+  S.setEstrelas(1, 2);
   S.avaliarConquistas({ venceu: true });
   ok(S.petDesbloqueado("mimi") === true, "conquista desbloqueia o pet");
   ok(S.equiparPet("mimi") === true, "equipa pet desbloqueado");
@@ -349,8 +349,8 @@ function ok(cond, msg) {
   const ls = makeLS();
   const S = loadStorage(ls);
   S.criarPerfil("Cris", 1);
-  // condições: faseMax>=2 (estreia,+20) e maxCombo>=10 (combo10,+30)
-  S.desbloquearFase(2);
+  // condições: totalEstrelas>=1 (estreia,+20) e maxCombo>=10 (combo10,+30)
+  S.setEstrelas(1, 2);
   S.registrarFimDePartida({ maxCombo: 12, semErro: true, venceu: true });
   const novas = S.avaliarConquistas({ venceu: true });
   const ids = novas.map((c) => c.id);
@@ -363,6 +363,29 @@ function ok(cond, msg) {
   ok(novas2.length === 0, "não desbloqueia de novo");
   ok(S.getMoedas() === moedasAntes, "não credita de novo");
   ok(!!S.conquistasDesbloqueadas().estreia, "fica registrada como desbloqueada");
+}
+
+// 11b) "Estreia" vale em QUALQUER mundo (vencer s1 da Soma também desbloqueia)
+{
+  const ls = makeLS();
+  const S = loadStorage(ls);
+  S.criarPerfil("Lia", 1);
+  ok(S.avaliarConquistas({ venceu: false }).length === 0, "sem estrela, sem estreia");
+  S.setEstrelas("s1", 1); // venceu a 1ª fase do mundo Soma & Subtração
+  const ids = S.avaliarConquistas({ venceu: true }).map((c) => c.id);
+  ok(ids.includes("estreia"), "estreia desbloqueia vencendo fase de mundo novo");
+}
+
+// 11c) "Continuar": último mundo jogado persiste (padrão tabuada, saves antigos ok)
+{
+  const ls = makeLS();
+  const S = loadStorage(ls);
+  S.criarPerfil("Bia", 1);
+  ok(S.ultimoMundo() === "tabuada", "padrão: tabuada (compatível com save antigo)");
+  S.setUltimoMundo("soma");
+  ok(S.ultimoMundo() === "soma", "registra o último mundo jogado");
+  const S2 = loadStorage(ls);
+  ok(S2.ultimoMundo() === "soma", "último mundo persiste entre instâncias");
 }
 
 // 12) Desafio diário + ofensiva (datas injetadas)

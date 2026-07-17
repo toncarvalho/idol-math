@@ -39,6 +39,8 @@ class GameScene extends Phaser.Scene {
     // operação das perguntas vem do mundo da fase ("divisao" pergunta 56 ÷ 7);
     // Desafio do Dia (fase sintética) e Boss Rush caem em "tabuada"
     this.operacao = mundoDaFase(this.fase);
+    // fase normal marca o mundo como o último jogado ("Continuar" do menu)
+    if (!this.bossRush && !this.diario) Storage.setUltimoMundo(this.operacao);
 
     this.pontuacao = 0;
     this.combo = 0;
@@ -819,13 +821,16 @@ class GameScene extends Phaser.Scene {
         (protegido ? " Seu escudo te protegeu!" : "")
     );
     this.txtDica.setText(`${this.q.texto} = ${this.q.resposta}`).setVisible(true);
-    // reforço conceitual: grade a×b para tabuada/divisão (56÷7 → grade 7×8);
+    // reforço conceitual: grade na MESMA ordem exibida na pergunta (tabuada);
+    // divisão usa o fato canônico (56÷7 → grade 7×8, a multiplicação por trás);
     // bolinhas de juntar/tirar para +/− (só até 20 pontos — acima disso a
     // dica textual basta)
     this.flashcard =
       this.operacao === "soma"
         ? Util.flashcardConta(this, this.q.a, this.q.b, this.q.op, 0x36d96b)
-        : Util.flashcardMultiplicacao(this, this.q.fatoA, this.q.fatoB, 0x36d96b);
+        : this.operacao === "divisao"
+        ? Util.flashcardMultiplicacao(this, this.q.fatoA, this.q.fatoB, 0x36d96b)
+        : Util.flashcardMultiplicacao(this, this.q.a, this.q.b, 0x36d96b);
     this.flutuarTexto(protegido ? "🛡️ Escudo protegeu!" : "-1 ❤️", protegido ? "#9ad8ff" : "#ff5050");
     this.atualizarHUD();
 

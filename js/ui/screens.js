@@ -209,7 +209,7 @@ const UIScreens = (() => {
       <div class="prog-nums">
         <div class="prog-num"><span class="pn-ico">🎯</span><b>${prec}</b><small>${est.acertos}/${est.total}</small></div>
         <div class="prog-num"><span class="pn-ico">⏱️</span><b>${formatarTempo(est.tempoMs)}</b><small>tempo</small></div>
-        <div class="prog-num"><span class="pn-ico">⭐</span><b>${est.totalEstrelas}/${FASES.length * 3}</b><small>Fase ${est.faseMax}</small></div>
+        <div class="prog-num"><span class="pn-ico">⭐</span><b>${est.totalEstrelas}/${FASES.length * 3}</b><small>estrelas</small></div>
       </div>`;
     let heat = "";
     for (let t = 1; t <= 10; t++) {
@@ -429,7 +429,9 @@ const UIScreens = (() => {
     AudioFX.sincronizarMusica();
     const meta = Storage.perfilAtual();
     const heroId = meta ? meta.heroiId : Storage.getHeroiId();
-    const faseMax = Storage.faseMax();
+    // "Continuar" retoma o ÚLTIMO mundo jogado (não só a Tabuada)
+    const mundoCont = getMundo(Storage.ultimoMundo()) || getMundo("tabuada");
+    const faseMax = Storage.faseMax(mundoCont.id);
     const ofensiva = Storage.ofensivaAtual();
     const feito = Storage.desafioFeitoHoje();
     const avatarFile = arquivoAvatar(Storage.roupaEquipada(heroId), heroId);
@@ -449,7 +451,7 @@ const UIScreens = (() => {
         <button class="ui-btn menu-trocar" type="button" data-acao="perfis" title="Trocar jogador">🔄</button>
       </div>
       <button class="ui-btn menu-jogar" type="button" data-acao="jogar">▶  JOGAR</button>
-      ${faseMax > 1 ? `<button class="ui-btn menu-continuar" type="button" data-acao="continuar">↪  Continuar (Fase ${faseMax})</button>` : ""}
+      ${faseMax > 1 ? `<button class="ui-btn menu-continuar" type="button" data-acao="continuar">↪  Continuar (${mundoCont.emoji} Fase ${faseMax})</button>` : ""}
       <div class="menu-grid3">
         <button class="ui-btn mg-rosa" type="button" data-acao="treino">📚 Treino</button>
         <button class="ui-btn mg-verde" type="button" data-acao="progresso">📊 Progresso</button>
@@ -839,8 +841,12 @@ const UIScreens = (() => {
         return iniciarJogo("TrainScene", { tabuadas: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], titulo: "Mix 1–10" });
       case "treino-fracas":
         return iniciarJogo("TrainScene", { tabuadas: treinoFracas, titulo: `Pontos fracos: ${treinoFracas.join(", ")}` });
-      case "continuar":
-        return iniciarJogo("GameScene", { faseId: Storage.faseMax(), heroId: Storage.getHeroiId() });
+      case "continuar": {
+        // maior fase desbloqueada do ÚLTIMO mundo jogado (id string p/ s*/d*)
+        const mundo = (getMundo(Storage.ultimoMundo()) || getMundo("tabuada")).id;
+        const fase = fasesDoMundo(mundo)[Storage.faseMax(mundo) - 1] || fasesDoMundo(mundo)[0];
+        return iniciarJogo("GameScene", { faseId: fase.id, heroId: Storage.getHeroiId() });
+      }
       case "desafio":
         return iniciarJogo("GameScene", { diario: true, heroId: Storage.getHeroiId() });
       case "bossrush":

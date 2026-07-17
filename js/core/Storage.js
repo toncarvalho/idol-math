@@ -26,6 +26,7 @@ const Storage = (() => {
     melhorPontuacao: 0,
     faseDesbloqueada: 1, // progresso do mundo TABUADA (índice 1-based; nome legado)
     mundos: {}, // { mundoId: índice desbloqueado } dos DEMAIS mundos (soma, divisão)
+    ultimoMundo: "tabuada", // último mundo jogado (botão "Continuar" do menu)
     estrelas: {}, // { faseId: 0..3 } melhor estrela por fase
     fatos: {}, // { "min x max": peso }  peso alto = errou mais (repetir mais)
     bossRush: false, // desbloqueado ao zerar a última fase
@@ -276,6 +277,15 @@ const Storage = (() => {
       const m = mundoId || "tabuada";
       if (m === "tabuada") return state.faseDesbloqueada || 1;
       return (state.mundos && state.mundos[m]) || 1;
+    },
+    /** Último mundo jogado (fase normal) — o "Continuar" do menu retoma nele. */
+    ultimoMundo() {
+      return state.ultimoMundo || "tabuada";
+    },
+    setUltimoMundo(mundoId) {
+      if (!mundoId || state.ultimoMundo === mundoId) return;
+      state.ultimoMundo = mundoId;
+      salvarSave();
     },
 
     // ===================== HERÓI (avatar do perfil) =====================
