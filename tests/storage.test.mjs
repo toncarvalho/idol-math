@@ -5,46 +5,20 @@
  * Como o Storage lê o localStorage na inicialização, cada cenário cria uma
  * instância nova com seu próprio mock (permite testar migração).
  */
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { fonte, carregar, criarOk, makeLS } from "./_loader.mjs";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const code = readFileSync(join(__dirname, "../js/core/Storage.js"), "utf8");
 // globais usados pelo Storage: dados (roupas/conquistas/herois/JOGO) + MathEngine
-const codeRoupas = readFileSync(join(__dirname, "../js/data/roupas.js"), "utf8");
-const codeEfeitos = readFileSync(join(__dirname, "../js/data/efeitos.js"), "utf8");
-const codePets = readFileSync(join(__dirname, "../js/data/pets.js"), "utf8");
-const codeConq = readFileSync(join(__dirname, "../js/data/conquistas.js"), "utf8");
-const codeHerois = readFileSync(join(__dirname, "../js/data/herois.js"), "utf8");
-const codeFases = readFileSync(join(__dirname, "../js/data/fases.js"), "utf8");
-const codeMath = readFileSync(join(__dirname, "../js/core/MathEngine.js"), "utf8");
+const bundle = [
+  "js/data/herois.js", "js/data/roupas.js", "js/data/efeitos.js", "js/data/pets.js",
+  "js/data/conquistas.js", "js/data/fases.js", "js/core/MathEngine.js", "js/core/Storage.js",
+].map(fonte).join("\n") + "\nreturn Storage;";
 
-function makeLS(initial = {}) {
-  const m = new Map(Object.entries(initial));
-  return {
-    getItem: (k) => (m.has(k) ? m.get(k) : null),
-    setItem: (k, v) => m.set(k, String(v)),
-    removeItem: (k) => m.delete(k),
-    _map: m,
-    has: (k) => m.has(k),
-  };
-}
 function loadStorage(ls) {
-  // dados + MathEngine definem globais usados pelo Storage
-  const bundle =
-    codeHerois + "\n" + codeRoupas + "\n" + codeEfeitos + "\n" + codePets + "\n" +
-    codeConq + "\n" + codeFases + "\n" + codeMath + "\n" + code + "\nreturn Storage;";
+  // o Storage lê o localStorage na inicialização → instância nova por cenário
   return new Function("localStorage", bundle)(ls);
 }
 
-let falhas = 0;
-function ok(cond, msg) {
-  if (!cond) {
-    console.error("  ✗", msg);
-    falhas++;
-  }
-}
+const { ok, resumo } = criarOk("Storage");
 
 // 1) Estado inicial: sem perfis
 {
@@ -284,9 +258,9 @@ function ok(cond, msg) {
 
 // 10d) requisitoAtendido (pura, todos os tipos de requisito)
 {
-  const { getRoupa: gr, requisitoAtendido: ra } = new Function(
-    codeRoupas + "\nreturn { getRoupa, requisitoAtendido };"
-  )();
+  const { getRoupa: gr, requisitoAtendido: ra } = carregar(
+    ["js/data/roupas.js"], ["getRoupa", "requisitoAtendido"]
+  );
   ok(ra(gr("rubi-festa"), {}) === true, "sem requisito passa");
   ok(ra(gr("rubi-dourada"), { totalEstrelas: 36 }) === true, "estrelas: cumpre");
   ok(ra(gr("rubi-dourada"), { totalEstrelas: 35 }) === false, "estrelas: não cumpre");
@@ -325,9 +299,9 @@ function ok(cond, msg) {
 
 // 10f) Dados dos PETS: 1 pet por conquista, poderes conhecidos
 {
-  const { PETS: P, CONQUISTAS: C } = new Function(
-    codePets + "\n" + codeConq + "\nreturn { PETS, CONQUISTAS };"
-  )();
+  const { PETS: P, CONQUISTAS: C } = carregar(
+    ["js/data/pets.js", "js/data/conquistas.js"], ["PETS", "CONQUISTAS"]
+  );
   const tipos = [
     "moedasVitoria", "congelaTempo", "guardaCombo", "tempoExtra", "escudoInicial",
     "dica5050", "moedasAcerto", "danoChefao", "vidaExtra", "reviver",
@@ -478,8 +452,4 @@ function ok(cond, msg) {
   ok(avisos === 1, "callback de falha de gravação é chamado");
 }
 
-if (falhas === 0) console.log("✅ Storage: todos os testes passaram.");
-else {
-  console.error(`❌ Storage: ${falhas} falha(s).`);
-  process.exit(1);
-}
+resumo();

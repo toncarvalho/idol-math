@@ -1,28 +1,17 @@
 /**
  * Testes das Regras (rode com: node tests/regras.test.mjs).
- * Regras.js é um IIFE global que usa a config JOGO (js/data/fases.js);
- * carregamos os dois e avaliamos, como nos demais testes buildless.
+ * Regras.js usa a config JOGO (js/data/fases.js) — carregamos os dois.
+ * Carregamento buildless e contador de falhas: tests/_loader.mjs.
  */
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { carregar, criarOk } from "./_loader.mjs";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const codeFases = readFileSync(join(__dirname, "../js/data/fases.js"), "utf8");
-const codeRegras = readFileSync(join(__dirname, "../js/core/Regras.js"), "utf8");
 const { Regras, JOGO, FASES, MECANICAS_CHEFAO, MUNDOS,
-        getFase, mundoDaFase, fasesDoMundo, indiceFase, proximaFase } = new Function(
-  codeFases + "\n" + codeRegras +
-    "\nreturn { Regras, JOGO, FASES, MECANICAS_CHEFAO, MUNDOS, getFase, mundoDaFase, fasesDoMundo, indiceFase, proximaFase };"
-)();
-
-let falhas = 0;
-function ok(cond, msg) {
-  if (!cond) {
-    console.error("  ✗", msg);
-    falhas++;
-  }
-}
+        getFase, mundoDaFase, fasesDoMundo, indiceFase, proximaFase } = carregar(
+  ["js/data/fases.js", "js/core/Regras.js"],
+  ["Regras", "JOGO", "FASES", "MECANICAS_CHEFAO", "MUNDOS",
+   "getFase", "mundoDaFase", "fasesDoMundo", "indiceFase", "proximaFase"]
+);
+const { ok, resumo } = criarOk("Regras");
 
 // pontosAcerto: base × combo; chefão usa a base do chefão
 ok(Regras.pontosAcerto(false, 1) === JOGO.pontos.base, "acerto simples = base");
@@ -167,8 +156,4 @@ fs_.forEach((f, i) => {
 });
 ok(proximaFase("s12") === null, "última fase da Soma não tem próxima");
 
-if (falhas) {
-  console.error(`\n❌ Regras: ${falhas} verificação(ões) falharam.`);
-  process.exit(1);
-}
-console.log("✅ Regras: todos os testes passaram.");
+resumo();

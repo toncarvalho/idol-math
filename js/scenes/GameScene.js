@@ -559,19 +559,13 @@ class GameScene extends Phaser.Scene {
       this.flashcard.destroy();
       this.flashcard = null;
     }
-    const fatos = Storage.getFatos();
-    if (this.operacao === "soma") {
-      this.q = MathEngine.gerarPerguntaConta(this.fase.conta, fatos);
-      this.opcoes = MathEngine.gerarOpcoesConta(this.q.resposta, this.q.a, this.q.b, this.q.op);
-    } else if (this.operacao === "divisao") {
-      this.q = MathEngine.gerarPerguntaDivisao(this.fase.tabuadas, JOGO.faixaFator, fatos);
-      // divisão NÃO passa a/b: os distratores certos são quocientes vizinhos
-      // (deltas ±1, ±2), não produtos da linha vizinha (escala errada)
-      this.opcoes = MathEngine.gerarOpcoes(this.q.resposta);
-    } else {
-      this.q = MathEngine.gerarPergunta(this.fase.tabuadas, JOGO.faixaFator, fatos);
-      this.opcoes = MathEngine.gerarOpcoes(this.q.resposta, this.q.a, this.q.b);
-    }
+    // pergunta + alternativas conforme a operação do mundo — a política de
+    // distratores por operação vive em MathEngine.gerarRodada
+    const rodada = MathEngine.gerarRodada(
+      this.operacao, this.fase, JOGO.faixaFator, Storage.getFatos()
+    );
+    this.q = rodada.pergunta;
+    this.opcoes = rodada.opcoes;
     this.txtPergunta.setText(`${this.q.texto} = ?`);
     GameUI.anunciar(`Quanto é ${this.q.falado}?`);
     Util.falar(this.q.falado);

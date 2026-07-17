@@ -219,8 +219,6 @@ const FASES = [
   },
 ];
 
-/** Ids de fase podem ser number (Tabuada, 1–12) ou string ("s1", "d1"...) —
- *  a comparação é sempre por String para o dataset HTML funcionar igual. */
 /**
  * MUNDO DA DIVISÃO — a "Turnê Reversa": os mesmos chefões da Tabuada voltam,
  * agora com as contas ao contrário (56 ÷ 7). Cada fase dN espelha a fase N:
@@ -325,6 +323,8 @@ FASES.filter((f) => !f.mundo).forEach((f, i) => {
   });
 });
 
+/** Ids de fase podem ser number (Tabuada, 1–12) ou string ("s1", "d1"...) —
+ *  a comparação é sempre por String para o dataset HTML funcionar igual. */
 function getFase(id) {
   return FASES.find((f) => String(f.id) === String(id)) || FASES[0];
 }

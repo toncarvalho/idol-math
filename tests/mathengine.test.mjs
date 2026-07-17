@@ -1,22 +1,11 @@
 /**
  * Testes do MathEngine (rode com: node tests/mathengine.test.mjs).
- * Como o jogo é buildless (IIFE global), carregamos o arquivo e avaliamos.
+ * Carregamento buildless e contador de falhas: tests/_loader.mjs.
  */
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { carregar, criarOk } from "./_loader.mjs";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const code = readFileSync(join(__dirname, "../js/core/MathEngine.js"), "utf8");
-const MathEngine = new Function(code + "\nreturn MathEngine;")();
-
-let falhas = 0;
-function ok(cond, msg) {
-  if (!cond) {
-    console.error("  ✗", msg);
-    falhas++;
-  }
-}
+const { MathEngine } = carregar(["js/core/MathEngine.js"], ["MathEngine"]);
+const { ok, resumo } = criarOk("MathEngine");
 
 // gerarOpcoes: 4 únicas, contém a resposta, todas > 0
 for (let i = 0; i < 2000; i++) {
@@ -183,8 +172,46 @@ for (let i = 0; i < 1000; i++) {
   ok(f56 > 0.25, `56÷7 ponderado pelo peso de 7x8 deve aparecer mais (${(f56 * 100).toFixed(1)}%)`);
 }
 
-if (falhas) {
-  console.error(`\n❌ ${falhas} verificação(ões) falharam.`);
-  process.exit(1);
+// ===================== RODADA UNIFICADA + CACHE =====================
+
+// gerarRodada: pergunta + 4 opções coerentes em cada operação
+{
+  const faixaR = { min: 1, max: 10 };
+  const faseTab = { tabuadas: [7] };
+  const faseDiv = { tabuadas: [7] };
+  const faseSoma = { conta: { tipo: "somaCruza", max: 18 } };
+  for (let i = 0; i < 500; i++) {
+    const rt = MathEngine.gerarRodada("tabuada", faseTab, faixaR);
+    ok(rt.pergunta.a * rt.pergunta.b === rt.pergunta.resposta, "rodada tabuada: conta exata");
+    ok(rt.opcoes.length === 4 && new Set(rt.opcoes).size === 4, "rodada tabuada: 4 opções únicas");
+    ok(rt.opcoes.includes(rt.pergunta.resposta), "rodada tabuada: contém a resposta");
+
+    const rd = MathEngine.gerarRodada("divisao", faseDiv, faixaR);
+    ok(rd.pergunta.a === rd.pergunta.b * rd.pergunta.resposta, "rodada divisão: conta exata");
+    ok(rd.opcoes.length === 4 && rd.opcoes.includes(rd.pergunta.resposta), "rodada divisão: opções ok");
+    // divisão NÃO usa a linha vizinha: os distratores ficam na escala do
+    // quociente (1..10 + deltas), nunca na escala dos produtos (>= 14)
+    ok(rd.opcoes.every((n) => n >= 1 && n <= rd.pergunta.resposta + 6),
+      `rodada divisão: distratores na escala do quociente (${rd.opcoes})`);
+
+    const rs = MathEngine.gerarRodada("soma", faseSoma, faixaR);
+    const calc = rs.pergunta.op === "+" ? rs.pergunta.a + rs.pergunta.b : rs.pergunta.a - rs.pergunta.b;
+    ok(calc === rs.pergunta.resposta, "rodada soma: conta exata");
+    ok(rs.opcoes.length === 4 && rs.opcoes.includes(rs.pergunta.resposta), "rodada soma: opções ok");
+  }
 }
-console.log("✅ MathEngine: todos os testes passaram.");
+
+// candidatosConta: cache por spec (mesma lista entre chamadas) e lista imutável
+{
+  const spec = { tipo: "mistura", de: [{ tipo: "doisDigitosCruza", op: "+" }, { tipo: "doisDigitosCruza", op: "-" }] };
+  const l1 = MathEngine.candidatosConta(spec);
+  const l2 = MathEngine.candidatosConta(spec);
+  ok(l1 === l2, "candidatosConta: mesma lista cacheada entre chamadas (sem re-enumerar)");
+  ok(l1.length > 1000, "candidatosConta: spec de 2 dígitos tem muitos candidatos");
+  MathEngine.gerarPerguntaConta(spec, { "27+45": 8 }); // ramo ponderado
+  ok(l1.every((c) => !("peso" in c)), "sorteio ponderado não grava peso na lista cacheada");
+  ok(l1.every((c) => c.chave === MathEngine.chaveConta(c.a, c.b, c.op)),
+    "candidatos têm a chave de peso pré-calculada");
+}
+
+resumo();

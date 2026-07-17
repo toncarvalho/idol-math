@@ -134,9 +134,11 @@ const MathEngine = (() => {
    *  doisDigitosCruza {op}   2 dígitos COM vai-um (27+45) ou emprestar (52−27)
    *  mistura {de: [spec...]} união de outros specs (fase final)
    */
-  function candidatosConta(spec) {
+  function enumerarCandidatos(spec) {
     const lista = [];
-    const add = (a, b, op) => lista.push({ a, b, op });
+    // chave pré-calculada: o sorteio ponderado consulta fatos[c.chave] sem
+    // montar a string a cada pergunta (specs de 2 dígitos têm milhares de itens)
+    const add = (a, b, op) => lista.push({ a, b, op, chave: chaveConta(a, b, op) });
     switch (spec.tipo) {
       case "contar":
         for (let a = 1; a <= spec.max - 1; a++)
@@ -214,6 +216,22 @@ const MathEngine = (() => {
   }
 
   /**
+   * Candidatos do spec, com CACHE por spec (WeakMap): as fases declaram specs
+   * constantes (`fase.conta`), então a enumeração — milhares de iterações nos
+   * specs de 2 dígitos — acontece uma vez só, não a cada pergunta. A lista
+   * cacheada é somente-leitura: quem sortear não deve gravar nela.
+   */
+  const cacheCandidatos = new WeakMap();
+  function candidatosConta(spec) {
+    let lista = cacheCandidatos.get(spec);
+    if (!lista) {
+      lista = enumerarCandidatos(spec);
+      cacheCandidatos.set(spec, lista);
+    }
+    return lista;
+  }
+
+  /**
    * Gera uma pergunta de soma/subtração a partir do spec da fase, com o
    * mesmo sorteio ponderado da tabuada (fatos fracos aparecem mais; chaves
    * "3+7" / "15-6" via chaveConta). Soma alterna a ordem exibida; subtração
@@ -223,17 +241,19 @@ const MathEngine = (() => {
     const lista = candidatosConta(spec);
     let pick;
     if (fatos && Object.keys(fatos).length) {
+      // pesos num array paralelo — a lista cacheada não é mutada
+      const pesos = new Array(lista.length);
       let total = 0;
-      for (const c of lista) {
-        c.peso = 1 + (fatos[chaveConta(c.a, c.b, c.op)] || 0) * 1.5;
-        total += c.peso;
+      for (let i = 0; i < lista.length; i++) {
+        pesos[i] = 1 + (fatos[lista[i].chave] || 0) * 1.5;
+        total += pesos[i];
       }
       let r = Math.random() * total;
       pick = lista[0];
-      for (const c of lista) {
-        r -= c.peso;
+      for (let i = 0; i < lista.length; i++) {
+        r -= pesos[i];
         if (r <= 0) {
-          pick = c;
+          pick = lista[i];
           break;
         }
       }
@@ -257,7 +277,7 @@ const MathEngine = (() => {
       falado: pick.op === "+" ? `${a} mais ${b}` : `${a} menos ${b}`,
       fatoA: pick.a,
       fatoB: pick.b,
-      chave: chaveConta(pick.a, pick.b, pick.op),
+      chave: pick.chave,
     };
   }
 
@@ -280,6 +300,17 @@ const MathEngine = (() => {
       if (opcoes.size >= 4) break;
       if (s > 0 && s !== resposta) opcoes.add(s);
     }
+    completarOpcoes(opcoes, resposta);
+    return embaralhar([...opcoes]);
+  }
+
+  /**
+   * Completa o Set até 4 opções válidas (> 0, ≠ resposta): tenta deltas
+   * aleatórios próximos (±6) e, se ainda faltar (respostas muito pequenas),
+   * cai nos sequenciais resposta+1, +2... Final comum de gerarOpcoes e
+   * gerarOpcoesConta.
+   */
+  function completarOpcoes(opcoes, resposta) {
     let i = 0;
     while (opcoes.size < 4 && i < 50) {
       const c = resposta + inteiroAleatorio(-6, 6);
@@ -291,7 +322,6 @@ const MathEngine = (() => {
       if (!opcoes.has(resposta + extra)) opcoes.add(resposta + extra);
       extra++;
     }
-    return embaralhar([...opcoes]);
   }
 
   /**
@@ -323,30 +353,15 @@ const MathEngine = (() => {
       }
     }
 
-    // 2) completa com deltas plausíveis (próximos da resposta)
+    // 2) completa com deltas plausíveis (próximos da resposta), depois o
+    //    final comum (aleatórios ±6 e fallback sequencial)
     const deltasBase = [-1, 1, -2, 2, resposta > 12 ? -10 : -3, 3, -4, 4, 5, -5];
-
-    let i = 0;
-    while (opcoes.size < 4 && i < 50) {
-      let candidato;
-      if (i < deltasBase.length) {
-        candidato = resposta + deltasBase[i];
-      } else {
-        candidato = resposta + inteiroAleatorio(-6, 6);
-      }
-      if (candidato > 0 && candidato !== resposta) {
-        opcoes.add(candidato);
-      }
-      i++;
+    for (const d of deltasBase) {
+      if (opcoes.size >= 4) break;
+      const candidato = resposta + d;
+      if (candidato > 0 && candidato !== resposta) opcoes.add(candidato);
     }
-
-    // fallback caso ainda falte (números muito pequenos)
-    let extra = 1;
-    while (opcoes.size < 4) {
-      if (!opcoes.has(resposta + extra)) opcoes.add(resposta + extra);
-      extra++;
-    }
-
+    completarOpcoes(opcoes, resposta);
     return embaralhar([...opcoes]);
   }
 
@@ -359,15 +374,43 @@ const MathEngine = (() => {
     return a;
   }
 
+  /**
+   * Rodada completa de uma pergunta da GameScene: { pergunta, opcoes } conforme
+   * a operação do mundo da fase. Concentra a política de distratores:
+   *  - "soma": spec `fase.conta` + gerarOpcoesConta (vai-um/emprestar, ±1±2);
+   *  - "divisao": gerarOpcoes SEM a/b — os distratores certos são os quocientes
+   *    vizinhos (deltas ±1, ±2); os produtos da linha vizinha teriam escala errada;
+   *  - "tabuada": gerarOpcoes com os fatores (erros da linha vizinha).
+   * Pura: `operacao` e `faixa` vêm de fora (o chamador usa mundoDaFase e
+   * JOGO.faixaFator) — o MathEngine segue sem dependências.
+   */
+  function gerarRodada(operacao, fase, faixa, fatos) {
+    if (operacao === "soma") {
+      const pergunta = gerarPerguntaConta(fase.conta, fatos);
+      return {
+        pergunta,
+        opcoes: gerarOpcoesConta(pergunta.resposta, pergunta.a, pergunta.b, pergunta.op),
+      };
+    }
+    if (operacao === "divisao") {
+      const pergunta = gerarPerguntaDivisao(fase.tabuadas, faixa, fatos);
+      return { pergunta, opcoes: gerarOpcoes(pergunta.resposta) };
+    }
+    const pergunta = gerarPergunta(fase.tabuadas, faixa, fatos);
+    return { pergunta, opcoes: gerarOpcoes(pergunta.resposta, pergunta.a, pergunta.b) };
+  }
+
   return {
     gerarPergunta,
     gerarPerguntaDivisao,
     gerarPerguntaConta,
+    gerarRodada,
     gerarOpcoes,
     gerarOpcoesConta,
     embaralhar,
     inteiroAleatorio,
     chaveFato,
     chaveConta,
+    candidatosConta, // exposto para os testes (cache/consistência dos specs)
   };
 })();

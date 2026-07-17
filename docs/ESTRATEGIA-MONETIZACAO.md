@@ -225,7 +225,7 @@ ANTES da tabuada na escola. Efeito comercial: amplia a faixa etária de ~8–10
 para **~6–10 anos** (irmãos mais novos jogam), dobrando o público-alvo do
 app pago.
 
-### Notas de implementação (para quando começar)
+### Notas de implementação
 
 - **Divisão é quase de graça**: o MathEngine já tem a tabela de fatos; a
   pergunta vira `(a×b) ÷ a`, os distratores de "linha vizinha" seguem a mesma

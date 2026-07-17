@@ -239,9 +239,29 @@ const UIScreens = (() => {
   function lojaHeroiAtual() {
     return lojaHeroiSel || Storage.getHeroiId();
   }
+  // Operações por tipo de item — a UI (seleção, confirmação, cards) é a mesma
+  // para roupa e efeito; só o Storage por trás muda. Roupa é POR HERÓI;
+  // efeito é por perfil. `reqOk` é o gate das roupas-troféu (requisito).
+  const LOJA_TIPOS = {
+    roupa: {
+      get: (id) => getRoupa(id),
+      possui: (id) => Storage.possuiRoupa(id),
+      estaEquipado: (id) => id === Storage.roupaEquipada(lojaHeroiAtual()),
+      equipar: (id) => Storage.equiparRoupa(lojaHeroiAtual(), id),
+      comprar: (item) => Storage.comprarRoupa(lojaHeroiAtual(), item.id, item.preco),
+      reqOk: (id) => Storage.requisitoRoupaOk(id),
+    },
+    efeito: {
+      get: (id) => getEfeito(id),
+      possui: (id) => Storage.possuiEfeito(id),
+      estaEquipado: (id) => id === Storage.efeitoEquipado(),
+      equipar: (id) => Storage.equiparEfeito(id),
+      comprar: (item) => Storage.comprarEfeito(item.id, item.preco),
+      reqOk: () => true,
+    },
+  };
   function itemSelecionado() {
-    if (!lojaSel) return null;
-    return lojaSel.tipo === "roupa" ? getRoupa(lojaSel.id) : getEfeito(lojaSel.id);
+    return lojaSel ? LOJA_TIPOS[lojaSel.tipo].get(lojaSel.id) : null;
   }
   function cardLoja(attr, id, miolo, info) {
     const selCls = lojaSel && lojaSel.id === id ? " sel" : "";
@@ -296,7 +316,7 @@ const UIScreens = (() => {
     // área de confirmação do item selecionado
     let confirmar = "";
     if (sel) {
-      const reqOk = lojaSel.tipo !== "roupa" || Storage.requisitoRoupaOk(sel.id);
+      const reqOk = LOJA_TIPOS[lojaSel.tipo].reqOk(sel.id);
       if (!reqOk) {
         confirmar = `<p class="loja-req">🔒 Para desbloquear: ${esc(sel.requisito.desc)}</p>`;
       } else if (moedas < sel.preco) {
@@ -340,46 +360,34 @@ const UIScreens = (() => {
       <p class="loja-sec">✨ Efeito de ataque <small>vale para todos os personagens</small></p>
       <div class="loja-grid loja-grid-fx">${fxCards}</div>`;
   }
-  function escolherRoupa(roupaId) {
-    const heroId = lojaHeroiAtual();
-    const roupa = typeof getRoupa === "function" ? getRoupa(roupaId) : null;
-    if (!roupa) return;
-    if (Storage.possuiRoupa(roupa.id)) {
-      if (roupa.id !== Storage.roupaEquipada(heroId)) {
-        Storage.equiparRoupa(heroId, roupa.id);
+  /**
+   * Toque num card da loja (roupa OU efeito, via LOJA_TIPOS): item possuído
+   * equipa direto; não possuído segue o fluxo de 2 toques — o 1º seleciona
+   * (preview), o 2º no mesmo card confirma a compra.
+   */
+  function escolherItem(tipo, id) {
+    const t = LOJA_TIPOS[tipo];
+    const item = t.get(id);
+    if (!item || item.id !== id) return; // getEfeito tem fallback p/ o padrão
+    if (t.possui(item.id)) {
+      if (!t.estaEquipado(item.id)) {
+        t.equipar(item.id);
         AudioFX.acerto();
       }
       lojaSel = null;
       return montarLoja();
     }
-    // não possuída: 1º toque seleciona (preview); 2º toque confirma a compra
-    if (lojaSel && lojaSel.tipo === "roupa" && lojaSel.id === roupa.id) {
+    if (lojaSel && lojaSel.tipo === tipo && lojaSel.id === item.id) {
       return comprarSelecionado();
     }
-    lojaSel = { tipo: "roupa", id: roupa.id };
-    montarLoja();
-  }
-  function escolherEfeito(efeitoId) {
-    const efeito = typeof getEfeito === "function" ? getEfeito(efeitoId) : null;
-    if (!efeito || efeito.id !== efeitoId) return;
-    if (Storage.possuiEfeito(efeito.id)) {
-      if (efeito.id !== Storage.efeitoEquipado()) {
-        Storage.equiparEfeito(efeito.id);
-        AudioFX.acerto();
-      }
-      lojaSel = null;
-      return montarLoja();
-    }
-    if (lojaSel && lojaSel.tipo === "efeito" && lojaSel.id === efeito.id) {
-      return comprarSelecionado();
-    }
-    lojaSel = { tipo: "efeito", id: efeito.id };
+    lojaSel = { tipo, id: item.id };
     montarLoja();
   }
   function comprarSelecionado() {
     const item = itemSelecionado();
     if (!item) return;
-    if (lojaSel.tipo === "roupa" && !Storage.requisitoRoupaOk(item.id)) {
+    const t = LOJA_TIPOS[lojaSel.tipo];
+    if (!t.reqOk(item.id)) {
       AudioFX.erro();
       return mostrarMsgLoja(`🔒 Para desbloquear: ${item.requisito.desc}`);
     }
@@ -388,10 +396,7 @@ const UIScreens = (() => {
       AudioFX.erro();
       return mostrarMsgLoja(`Faltam 🪙 ${falta} — jogue pra ganhar! 🎮`);
     }
-    const ok = lojaSel.tipo === "roupa"
-      ? Storage.comprarRoupa(lojaHeroiAtual(), item.id, item.preco)
-      : Storage.comprarEfeito(item.id, item.preco);
-    if (!ok) {
+    if (!t.comprar(item)) {
       AudioFX.erro();
       return;
     }
@@ -937,9 +942,9 @@ const UIScreens = (() => {
         if (!alvo || !r.contains(alvo)) return;
         AudioFX.unlock();
         if (alvo.dataset.cfg) return alternarAjuste(alvo.dataset.cfg);
-        if (alvo.dataset.roupa) return escolherRoupa(alvo.dataset.roupa);
+        if (alvo.dataset.roupa) return escolherItem("roupa", alvo.dataset.roupa);
         if (alvo.dataset.pet) return escolherPet(alvo.dataset.pet);
-        if (alvo.dataset.efeito) return escolherEfeito(alvo.dataset.efeito);
+        if (alvo.dataset.efeito) return escolherItem("efeito", alvo.dataset.efeito);
         if (alvo.dataset.lojaheroi) {
           lojaHeroiSel = +alvo.dataset.lojaheroi;
           lojaSel = null;
