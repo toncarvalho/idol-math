@@ -17,7 +17,7 @@ class TrainScene extends Phaser.Scene {
   create() {
     this.cameras.main.fadeIn(180, 13, 13, 18);
     this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, "bg");
-    AudioFX.sincronizarMusica();
+    AudioFX.sincronizarMusica("jogo");
 
     // tempo de jogo (painel de progresso)
     this._tInicio = this.time.now;

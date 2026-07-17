@@ -137,7 +137,7 @@ class GameScene extends Phaser.Scene {
 
     this.criarHUD();
     this.criarPalco();
-    AudioFX.sincronizarMusica();
+    AudioFX.sincronizarMusica(this.bossRush ? "chefao" : "jogo");
 
     if (this.bossRush) this.iniciarChefao();
     else this.proximoInimigo(true);
@@ -483,6 +483,7 @@ class GameScene extends Phaser.Scene {
 
   iniciarChefao() {
     this.isBoss = true;
+    AudioFX.sincronizarMusica("chefao");
     this.petDanoBoss = this.temPoder("danoChefao"); // 🐉 rearma a cada chefão
     const boss = this.fase.boss;
     this.mec = getMecanicaChefao(this.fase);

@@ -120,7 +120,8 @@ A grande vantagem: **o jogo não coleta dado nenhum** — tudo é `localStorage`
 - [x] Arte dos inimigos e chefões (24 figuras SVG flat, estilo coeso com os heróis)
       no lugar dos emojis — inclui os tiles da grade de fases.
 - [x] Heroína visível no palco, com animação de ataque (raio) e de golpe recebido.
-- [ ] Música real (2–3 loops licenciados), mantendo o synth como fallback.
+- [x] Música real: 3 loops CC0 do OpenGameArt (menu/jogo/chefão, ver
+      `docs/MUSICAS.md`), synth como fallback.
 - [x] Mecânica especial por chefão + power-ups de combo (ver §11).
 - [x] Estrutura de Mundos no ar: seleção de habilidade antes da grade,
       Tabuada dentro, prévias "Em breve" de Soma e Divisão (ver §12).
@@ -191,8 +192,8 @@ fundação a fazer.
    3–12 via `boss.mecanica` (catálogo `MECANICAS_CHEFAO` em `js/data/fases.js`),
    mais 2 power-ups por combo: 🛡️ escudo (x4, bloqueia a perda de 1 vida) e
    ⚡ golpe duplo (x8, próximo acerto vale 2).
-4. Áudio 100% sintetizado (Web Audio): funcional, mas o tema kpop pede música
-   marcante. **Plano**: 2–3 loops licenciados; synth vira fallback.
+4. ~~Áudio 100% sintetizado (Web Audio)~~ **Feito**: 3 loops CC0
+   (menu/jogo/chefão, `docs/MUSICAS.md`); o synth ficou como fallback.
 
 Critério de "pronto para cobrar": itens 1–4 fechados + capturas de tela de loja
 que se sustentem ao lado dos concorrentes pagos da categoria.

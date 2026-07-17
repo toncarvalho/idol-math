@@ -431,7 +431,7 @@ const UIScreens = (() => {
 
   // ===================== MENU =====================
   function montarMenu() {
-    AudioFX.sincronizarMusica();
+    AudioFX.sincronizarMusica("menu");
     const meta = Storage.perfilAtual();
     const heroId = meta ? meta.heroiId : Storage.getHeroiId();
     // "Continuar" retoma o ÚLTIMO mundo jogado (não só a Tabuada)
