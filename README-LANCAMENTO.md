@@ -75,24 +75,27 @@
 
 ### O que fazer
 
-1. **Flag `DEMO` em `js/data/fases.js`**
-   - Adicionar:
-     ```javascript
-     DEMO: true,  // true para web, false para app
-     fasesGratis: [1, 2, "s1", "s2", "d1", "d2"],  // 2 de cada mundo
-     ```
+> 📄 **Especificação completa: [`docs/PLANO-DEMO-WEB.md`](docs/PLANO-DEMO-WEB.md)**
+> — traz os 6 pontos de trava com arquivo e linha, o código do módulo novo, os
+> casos de teste e o roteiro de verificação manual.
 
-2. **Gating em `js/ui/screens.js`**
-   - Função `verificarFaseGratis(faseId)` que retorna boolean
-   - Ao clicar em fase bloqueada: modal "Desbloqueie no app completo"
-   - Botões: "Google Play" + "App Store" (links das lojas)
-   - Design amigável (sem dark patterns)
+1. **Novo módulo `js/core/Demo.js`**
+   - Config e regras da demo num arquivo só (não em `JOGO`), para o empacote
+     Capacitor ter um único ponto a desligar
+   - 2 fases grátis por mundo; Boss Rush, Desafio do Dia e Loja travados
+   - Trava de **entrada**, nunca de save: o progresso continua sendo gravado
+
+2. **Gating em `js/ui/screens.js`** (6 pontos)
+   - Grade de fases, clique em fase, tela de resultado, roteador
+     (loja/desafio/boss rush), botão Continuar, seleção de mundos
+   - Nova tela `screen-premium` com o que vem na versão completa
+   - Sem dark patterns: sempre há caminho de volta, e a tela diz que as moedas
+     ficam guardadas
 
 3. **Testar na web**
-   - `python3 -m http.server 8000` → `http://localhost:8000`
-   - Jogar fases 1–2 de cada mundo (OK)
-   - Tentar acessar fase 3+ (bloqueado, CTA aparece)
-   - Rodar `npm test` (deve passar)
+   - `npm test` (novo `tests/demo.test.mjs`; `sw.test.mjs` exige `Demo.js` no
+     `ASSETS` do `sw.js` + bump do `CACHE`)
+   - `python3 -m http.server 8000` → roteiro de 10 passos no plano
 
 ### Resultado esperado
 - Web demo funcional com as 2 primeiras fases grátis de cada mundo
@@ -252,6 +255,7 @@ Hoje (ago 8)          Semana 1        Semana 2        Semana 4       Semana 6   
 | `CLAUDE.md` | Guia de desenvolvimento (atualizar com mundos) |
 | `ESTRATEGIA-MONETIZACAO.md` | Modelo de negócio e decisões |
 | `POLITICA-PRIVACIDADE.md` | Conformidade legal (LGPD/COPPA) |
+| `PLANO-DEMO-WEB.md` | Especificação da Fase 1 (demo web + travas) |
 | `CHECKLIST-CONFORMIDADE.md` | Checklist detalhado (todas as etapas) |
 | `FICHAS-LOJA.md` | Textos prontos para copiar/colar |
 | `README-LANCAMENTO.md` | Este arquivo (status e timeline) |
